@@ -49,7 +49,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
           <Menu className="w-6 h-6 text-gray-600" />
-          <span className="font-bold text-xl tracking-tight text-black">SNEAKER<span className="text-blue-600">APP</span></span>
+          <span className="font-bold text-xl tracking-tight text-black">G<span className="text-blue-600">Studio</span></span>
         </div>
         <div className="relative p-2 bg-gray-100 rounded-full">
            <ShoppingBag className="w-5 h-5 text-gray-700" />
