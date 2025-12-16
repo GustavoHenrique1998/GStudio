@@ -1,64 +1,115 @@
-import Image from "next/image";
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ShoppingBag, Star, ArrowRight, Menu } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+// --- SUA CONEXÃO (Igual à da página de detalhes) ---
+const supabase = createClient(
+  "https://ngnzibntpncdcrkoktus.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nbnppYm50cG5jZGNya29rdHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MDM2MzksImV4cCI6MjA4MTM3OTYzOX0.OujKy3UrxekqE47FWm9mBHKVmNtVxEY-GILQDJCHv3I"
+);
+
+// Tipagem (Colunas em Inglês)
+interface Product {
+  id: number;
+  name: string;
+  price: string;
+  category: string;
+  image_url: string;
+}
 
 export default function Home() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      // Busca na tabela 'produtos' (Português)
+      const { data, error } = await supabase
+        .from('produtos') 
+        .select('*');
+      
+      if (error) {
+        console.error("Erro ao buscar produtos:", error);
+      } else {
+        setProducts(data || []);
+      }
+      setLoading(false);
+    }
+
+    fetchProducts();
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
+      
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-2">
+          <Menu className="w-6 h-6 text-gray-600" />
+          <span className="font-bold text-xl tracking-tight text-black">SNEAKER<span className="text-blue-600">APP</span></span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="relative p-2 bg-gray-100 rounded-full">
+           <ShoppingBag className="w-5 h-5 text-gray-700" />
         </div>
+      </header>
+
+      {/* HERO BANNER (Estático por enquanto) */}
+      <section className="px-4 py-6">
+        <div className="bg-black rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+          <div className="relative z-10">
+            <span className="text-xs font-semibold uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Novidade</span>
+            <h1 className="text-3xl font-bold mt-2 leading-tight">Coleção de Verão <br/> 2025</h1>
+             <button className="mt-4 bg-white text-black px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
+              Ver Ofertas <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* LISTA DINÂMICA (Vinda do Supabase) */}
+      <main className="px-4">
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          Disponíveis <Star size={16} className="text-yellow-500 fill-yellow-500" />
+        </h2>
+
+        {loading ? (
+          <div className="flex justify-center p-10">Carregando...</div>
+        ) : products.length === 0 ? (
+          <div className="text-center text-gray-500 p-10">Nenhum produto cadastrado ainda.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {products.map((product) => (
+              <Link href={`/product/${product.id}`} key={product.id} className="block group">
+                <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex flex-col justify-between h-full group-active:scale-95 transition-transform">
+                  <div className="aspect-square bg-gray-100 rounded-lg mb-3 overflow-hidden relative">
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Sem Foto</div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">{product.category}</p>
+                    <h3 className="font-semibold text-sm leading-tight mb-2 h-10 line-clamp-2">{product.name}</h3>
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className="font-bold text-sm">{product.price}</span>
+                      <div className="bg-black text-white p-2 rounded-lg">
+                        <ShoppingBag size={14} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
