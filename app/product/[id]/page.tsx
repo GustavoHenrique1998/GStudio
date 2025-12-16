@@ -9,9 +9,11 @@ import { createClient } from '@supabase/supabase-js';
 // --- SUA CONEXÃO ---
 // Note que aqui voltamos a usar as variáveis de ambiente para ficar seguro na Vercel
 // Se der erro localmente, certifique-se de ter o arquivo .env.local
+// --- MUDANÇA AQUI ---
+// Removemos o process.env para garantir que ele use a URL certa e não pegue lixo da Vercel
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ngnzibntpncdcrkoktus.supabase.co",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nbnppYm50cG5jZGNya29rdHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MDM2MzksImV4cCI6MjA4MTM3OTYzOX0.OujKy3UrxekqE47FWm9mBHKVmNtVxEY-GILQDJCHv3I"
+  "https://ngnzibntpncdcrkoktus.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nbnppYm50cG5jZGNya29rdHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MDM2MzksImV4cCI6MjA4MTM3OTYzOX0.OujKy3UrxekqE47FWm9mBHKVmNtVxEY-GILQDJCHv3I"
 );
 
 interface Product {
