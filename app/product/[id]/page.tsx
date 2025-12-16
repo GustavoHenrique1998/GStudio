@@ -118,7 +118,7 @@ export default function ProductDetail() {
           disabled={!selectedSize}
           onClick={() => {
              if (!selectedSize) return;
-             const phone = "5511999999999"; 
+             const phone = "5516993326508"; 
              window.open(`https://wa.me/${phone}?text=Quero o ${product.name} tamanho ${selectedSize}`, '_blank');
           }}
         >
