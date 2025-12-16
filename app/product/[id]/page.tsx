@@ -21,7 +21,7 @@ interface Product {
   description: string;
   category: string;
   image_url: string;
-  sizes: string; // Mudamos para 'any' para aceitar texto ou array temporariamente
+  sizes: string | string[]; // Aceita Texto OU Lista
 }
 
 export default function ProductDetail() {
