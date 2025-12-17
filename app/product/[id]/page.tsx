@@ -20,7 +20,8 @@ interface Product {
   description: string;
   category: string;
   image_url: string;
-  gallery: string[]; // Nova coluna de galeria
+  // Em vez de 'any', dizemos que pode ser Texto OU Lista de Textos
+  gallery: string | string[]; 
   sizes: string | string[];
 }
 
@@ -29,11 +30,10 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Estados novos para Galeria e Tamanhos
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [processedSizes, setProcessedSizes] = useState<string[]>([]);
-  const [activeImageIndex, setActiveImageIndex] = useState(0); // Qual foto está aparecendo?
-  const [images, setImages] = useState<string[]>([]); // Lista final de imagens
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [images, setImages] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -43,18 +43,39 @@ export default function ProductDetail() {
         .eq('id', params.id)
         .single();
 
-      if (!error) {
+      if (!error && data) {
         setProduct(data);
         
-        // --- 1. TRATAMENTO DA GALERIA ---
-        // Se tiver galeria no banco, usa ela. Se não, usa a foto principal repetida ou única.
+        // --- 1. TRATAMENTO DA GALERIA BLINDADO ---
         let galleryList: string[] = [];
-        if (data.gallery && Array.isArray(data.gallery) && data.gallery.length > 0) {
-            galleryList = data.gallery;
-        } else if (data.image_url) {
+        
+        // Debug: Mostra no console o que veio do banco (ajuda a descobrir erros)
+        console.log("Dados brutos da Galeria:", data.gallery); 
+
+        if (data.gallery) {
+            if (Array.isArray(data.gallery)) {
+                 // Se já for uma lista bonitinha
+                 galleryList = data.gallery;
+            } else if (typeof data.gallery === 'string') {
+                 // Se vier como Texto "['link', 'link']", a gente converte
+                 try {
+                     const jsonString = data.gallery.replace(/'/g, '"'); // Troca aspas simples por duplas
+                     galleryList = JSON.parse(jsonString);
+                 } catch (e) {
+                     console.error("Erro ao converter galeria, usando como link único:", e);
+                     // Se não der pra converter, assume que é um link só
+                     galleryList = [data.gallery]; 
+                 }
+            }
+        }
+        
+        // Se a galeria falhou ou está vazia, usa a foto principal (image_url)
+        if (galleryList.length === 0 && data.image_url) {
             galleryList = [data.image_url];
         }
+        
         setImages(galleryList);
+
 
         // --- 2. TRATAMENTO DOS TAMANHOS ---
         let safeSizes: string[] = [];
@@ -83,45 +104,46 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 pb-32">
       
-      {/* BOTÃO VOLTAR */}
       <div className="fixed top-4 left-4 z-20">
         <Link href="/" className="bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-100 flex items-center justify-center hover:scale-105 transition-transform">
           <ArrowLeft size={22} />
         </Link>
       </div>
 
-      {/* --- ÁREA DA GALERIA --- */}
+      {/* ÁREA DA GALERIA */}
       <div className="h-[55vh] bg-gray-100 relative overflow-hidden group">
         <AnimatePresence mode='wait'>
-            <motion.img 
-                key={activeImageIndex} // A chave muda, forçando a animação
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                src={images[activeImageIndex]} 
-                alt={product.name} 
-                className="w-full h-full object-cover"
-            />
+            {images.length > 0 ? (
+                <motion.img 
+                    key={activeImageIndex}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    src={images[activeImageIndex]} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">Sem Imagem</div>
+            )}
         </AnimatePresence>
         
-        {/* Degradê na base da foto */}
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white to-transparent"></div>
 
-        {/* Botões de Navegação (Só aparecem se tiver mais de 1 foto) */}
         {images.length > 1 && (
             <>
-                <button onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10">
                     <ChevronLeft size={20} />
                 </button>
-                <button onClick={() => setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10">
                     <ChevronRight size={20} />
                 </button>
             </>
         )}
       </div>
 
-      {/* --- MINIATURAS (THUMBNAILS) --- */}
+      {/* MINIATURAS */}
       <div className="px-6 relative z-10 -mt-12 mb-6">
         {images.length > 1 && (
             <div className="flex justify-center gap-2 overflow-x-auto py-2">
@@ -129,7 +151,7 @@ export default function ProductDetail() {
                     <button 
                         key={idx}
                         onClick={() => setActiveImageIndex(idx)}
-                        className={`w-14 h-14 rounded-xl border-2 overflow-hidden transition-all ${activeImageIndex === idx ? 'border-black scale-110 shadow-lg' : 'border-white opacity-70'}`}
+                        className={`w-14 h-14 rounded-xl border-2 overflow-hidden transition-all flex-shrink-0 bg-white ${activeImageIndex === idx ? 'border-black scale-110 shadow-lg' : 'border-white opacity-70'}`}
                     >
                         <img src={img} className="w-full h-full object-cover" />
                     </button>
@@ -138,7 +160,6 @@ export default function ProductDetail() {
         )}
       </div>
 
-      {/* CONTEÚDO DO PRODUTO */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -154,7 +175,6 @@ export default function ProductDetail() {
         
         <p className="text-gray-400 text-sm font-medium mb-6 uppercase tracking-wider">{product.category}</p>
 
-        {/* TAMANHOS */}
         <div className="mb-8">
           <h3 className="font-bold text-sm mb-3 text-gray-800">Tamanho</h3>
           <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
@@ -171,23 +191,12 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* DESCRIÇÃO */}
         <div className="mb-8 space-y-4">
             <h3 className="font-bold text-sm text-gray-800">Detalhes</h3>
             <p className="text-gray-500 text-sm leading-relaxed">{product.description}</p>
-            
-            <div className="flex gap-4 mt-6 pt-6 border-t border-gray-100">
-                <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                    <ShieldCheck size={16} className="text-green-500"/> Garantia
-                </div>
-                <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                    <Truck size={16} className="text-blue-500"/> Envio Rápido
-                </div>
-            </div>
         </div>
       </motion.div>
       
-      {/* BOTÃO COMPRAR */}
        <div className="fixed bottom-0 w-full bg-white/90 backdrop-blur-lg border-t border-gray-100 p-4 pb-8 shadow-2xl z-20">
         <motion.button 
           whileTap={{ scale: 0.95 }}

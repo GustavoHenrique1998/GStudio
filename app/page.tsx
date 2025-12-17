@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Star, ArrowRight, Menu, Search } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
-import { motion } from 'framer-motion'; // Importando animações
+import { motion } from 'framer-motion';
 
 // --- CONEXÃO ---
 const supabase = createClient(
@@ -18,6 +18,7 @@ interface Product {
   price: string;
   category: string;
   image_url: string;
+  gallery: string | string[]; // Aceita texto ou lista
 }
 
 // Configuração das Animações
@@ -25,13 +26,13 @@ const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.1 } // Um item aparece 0.1s depois do outro
+    transition: { staggerChildren: 0.1 }
   }
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 }, // Começa invisível e um pouco pra baixo
-  show: { opacity: 1, y: 0 }     // Sobe suavemente
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
 };
 
 export default function Home() {
@@ -47,10 +48,34 @@ export default function Home() {
     fetchProducts();
   }, []);
 
+  // --- FUNÇÃO MÁGICA PARA PEGAR A FOTO CERTA ---
+  const getMainImage = (product: Product) => {
+    // 1. Se tiver a imagem principal antiga, usa ela
+    if (product.image_url) return product.image_url;
+
+    // 2. Se não, tenta pegar a primeira da galeria
+    if (product.gallery) {
+        try {
+            let gallery = product.gallery;
+            // Se vier como texto "['link']", converte para lista
+            if (typeof gallery === 'string') {
+                gallery = JSON.parse(gallery.replace(/'/g, '"'));
+            }
+            // Se for uma lista válida e tiver itens, pega o primeiro
+            if (Array.isArray(gallery) && gallery.length > 0) {
+                return gallery[0];
+            }
+        } catch (e) {
+            return null;
+        }
+    }
+    return null; // Sem foto
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
       
-      {/* HEADER MODERNO */}
+      {/* HEADER */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm transition-all">
         <div className="flex items-center gap-3">
           <div className="bg-black text-white p-2 rounded-lg">
@@ -67,7 +92,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* HERO SECTION (BANNER) */}
+      {/* HERO SECTION */}
       <section className="px-4 py-8">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
@@ -75,7 +100,6 @@ export default function Home() {
           transition={{ duration: 0.5 }}
           className="bg-black rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden min-h-[300px] flex flex-col justify-center"
         >
-          {/* Efeito de fundo */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-40 -mr-16 -mt-16"></div>
           
           <div className="relative z-10 max-w-xs">
@@ -110,40 +134,45 @@ export default function Home() {
             animate="show"
             className="grid grid-cols-2 gap-4"
           >
-            {products.map((product) => (
-              <motion.div key={product.id} variants={item}>
-                <Link href={`/product/${product.id}`} className="block group">
-                  <div className="bg-white rounded-2xl p-3 shadow-sm border border-transparent hover:border-gray-100 hover:shadow-xl transition-all duration-300 h-full flex flex-col relative overflow-hidden">
-                    
-                    {/* Imagem com Zoom suave */}
-                    <div className="aspect-square bg-gray-100 rounded-xl mb-3 overflow-hidden relative">
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name} 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Sem Foto</div>
-                      )}
-                    </div>
+            {products.map((product) => {
+              // Calcula a imagem certa antes de renderizar
+              const displayImage = getMainImage(product);
 
-                    {/* Informações */}
-                    <div className="flex flex-col flex-grow">
-                      <p className="text-[10px] font-bold uppercase text-gray-400 mb-1 tracking-wide">{product.category}</p>
-                      <h3 className="font-bold text-sm leading-tight mb-2 text-gray-800">{product.name}</h3>
+              return (
+                <motion.div key={product.id} variants={item}>
+                  <Link href={`/product/${product.id}`} className="block group">
+                    <div className="bg-white rounded-2xl p-3 shadow-sm border border-transparent hover:border-gray-100 hover:shadow-xl transition-all duration-300 h-full flex flex-col relative overflow-hidden">
                       
-                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
-                        <span className="font-extrabold text-base">{product.price}</span>
-                        <div className="bg-black text-white p-2 rounded-full shadow-lg group-active:scale-90 transition-transform">
-                          <ArrowRight size={14} />
+                      {/* IMAGEM DO CARD (CORRIGIDA) */}
+                      <div className="aspect-square bg-gray-100 rounded-xl mb-3 overflow-hidden relative">
+                        {displayImage ? (
+                          <img 
+                            src={displayImage} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Sem Foto</div>
+                        )}
+                      </div>
+
+                      {/* Informações */}
+                      <div className="flex flex-col flex-grow">
+                        <p className="text-[10px] font-bold uppercase text-gray-400 mb-1 tracking-wide">{product.category}</p>
+                        <h3 className="font-bold text-sm leading-tight mb-2 text-gray-800 line-clamp-2">{product.name}</h3>
+                        
+                        <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
+                          <span className="font-extrabold text-base">{product.price}</span>
+                          <div className="bg-black text-white p-2 rounded-full shadow-lg group-active:scale-90 transition-transform">
+                            <ArrowRight size={14} />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </motion.div>
         )}
       </main>
