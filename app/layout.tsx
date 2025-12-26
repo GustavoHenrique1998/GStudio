@@ -1,33 +1,31 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import Footer from "../components/Footer";
+import WhatsAppButton from "../components/WhatsAppButton";
+// 1. IMPORTAR O CONTEXTO
+import { CartProvider } from "./context/CartContext"; 
+import CartSidebar from "../components/CartSidebar"; // <--- NOVO
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "GStudio",
-  description: "GStudio",
+  title: "G-Studio | Streetwear",
+  description: "A melhor loja de streetwear do Brasil.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="pt-br">
+      <body className={inter.className}>
+        <CartProvider>
+            <CartSidebar /> {/* <--- ADICIONE AQUI! Ele fica invisível até ser chamado */}
+            
+            {children}
+            
+            <WhatsAppButton />
+            <Footer />
+        </CartProvider>
       </body>
     </html>
   );

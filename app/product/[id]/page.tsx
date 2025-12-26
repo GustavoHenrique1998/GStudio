@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ShoppingBag, ShieldCheck, Truck, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../../context/CartContext'; 
 
 // --- CONEXÃO ---
 const supabase = createClient(
@@ -20,7 +21,6 @@ interface Product {
   description: string;
   category: string;
   image_url: string;
-  // Em vez de 'any', dizemos que pode ser Texto OU Lista de Textos
   gallery: string | string[]; 
   sizes: string | string[];
 }
@@ -29,6 +29,7 @@ export default function ProductDetail() {
   const params = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
   
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [processedSizes, setProcessedSizes] = useState<string[]>([]);
@@ -46,49 +47,25 @@ export default function ProductDetail() {
       if (!error && data) {
         setProduct(data);
         
-        // --- 1. TRATAMENTO DA GALERIA BLINDADO ---
+        // Tratamento Galeria
         let galleryList: string[] = [];
-        
-        // Debug: Mostra no console o que veio do banco (ajuda a descobrir erros)
-        console.log("Dados brutos da Galeria:", data.gallery); 
-
         if (data.gallery) {
-            if (Array.isArray(data.gallery)) {
-                 // Se já for uma lista bonitinha
-                 galleryList = data.gallery;
-            } else if (typeof data.gallery === 'string') {
-                 // Se vier como Texto "['link', 'link']", a gente converte
-                 try {
-                     const jsonString = data.gallery.replace(/'/g, '"'); // Troca aspas simples por duplas
-                     galleryList = JSON.parse(jsonString);
-                 } catch (e) {
-                     console.error("Erro ao converter galeria, usando como link único:", e);
-                     // Se não der pra converter, assume que é um link só
-                     galleryList = [data.gallery]; 
-                 }
+            if (Array.isArray(data.gallery)) { galleryList = data.gallery; }
+            else if (typeof data.gallery === 'string') {
+                 try { galleryList = JSON.parse(data.gallery.replace(/'/g, '"')); }
+                 catch (e) { galleryList = [data.gallery]; }
             }
         }
-        
-        // Se a galeria falhou ou está vazia, usa a foto principal (image_url)
-        if (galleryList.length === 0 && data.image_url) {
-            galleryList = [data.image_url];
-        }
-        
+        if (galleryList.length === 0 && data.image_url) { galleryList = [data.image_url]; }
         setImages(galleryList);
 
-
-        // --- 2. TRATAMENTO DOS TAMANHOS ---
+        // Tratamento Tamanhos
         let safeSizes: string[] = [];
         if (data.sizes) {
-            if (Array.isArray(data.sizes)) {
-                safeSizes = data.sizes;
-            } else if (typeof data.sizes === 'string') {
-                try {
-                    const jsonString = data.sizes.replace(/'/g, '"');
-                    safeSizes = JSON.parse(jsonString);
-                } catch (e) {
-                    safeSizes = [data.sizes];
-                }
+            if (Array.isArray(data.sizes)) { safeSizes = data.sizes; }
+            else if (typeof data.sizes === 'string') {
+                try { safeSizes = JSON.parse(data.sizes.replace(/'/g, '"')); }
+                catch (e) { safeSizes = [data.sizes]; }
             }
         }
         setProcessedSizes(safeSizes);
@@ -101,117 +78,120 @@ export default function ProductDetail() {
   if (loading) return <div className="h-screen flex items-center justify-center font-bold animate-pulse">Carregando...</div>;
   if (!product) return <div className="h-screen flex items-center justify-center">Produto não encontrado.</div>;
 
+  // Botão de Adicionar (Reutilizável)
+  const AddToCartButton = ({ mobile }: { mobile?: boolean }) => (
+    <motion.button 
+      whileTap={{ scale: 0.95 }}
+      className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-3 text-lg shadow-xl transition-all ${selectedSize ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+      disabled={!selectedSize}
+      onClick={() => {
+         if (!selectedSize) return;
+         if (product) addToCart(product, selectedSize);
+      }}
+    >
+      <ShoppingBag size={22} />
+      {selectedSize ? 'Adicionar à Sacola' : 'Escolha um Tamanho'}
+    </motion.button>
+  );
+
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900 pb-32">
+    <div className="min-h-screen bg-white font-sans text-gray-900 pb-32 md:pb-0 md:pt-24">
       
-      <div className="fixed top-4 left-4 z-20">
+      {/* Botão Voltar (Ajustado para PC e Mobile) */}
+      <div className="fixed top-4 left-4 z-20 md:top-8 md:left-8">
         <Link href="/" className="bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-100 flex items-center justify-center hover:scale-105 transition-transform">
           <ArrowLeft size={22} />
         </Link>
       </div>
 
-      {/* ÁREA DA GALERIA */}
-      <div className="h-[55vh] bg-gray-100 relative overflow-hidden group">
-        <AnimatePresence mode='wait'>
-            {images.length > 0 ? (
-                <motion.img 
-                    key={activeImageIndex}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    src={images[activeImageIndex]} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover"
-                />
-            ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">Sem Imagem</div>
+      {/* CONTAINER PRINCIPAL (Vira Grid no PC) */}
+      <div className="max-w-7xl mx-auto flex flex-col md:grid md:grid-cols-2 md:gap-16 md:px-8 items-start">
+
+        {/* === COLUNA DA ESQUERDA: IMAGENS === */}
+        <div className="relative w-full">
+          {/* Galeria Principal (AUMENTADA AQUI: md:h-[80vh]) */}
+          <div className="h-[50vh] md:h-[80vh] bg-gray-100 relative overflow-hidden group md:rounded-3xl shadow-sm">
+            <AnimatePresence mode='wait'>
+                {images.length > 0 ? (
+                    <motion.img 
+                        key={activeImageIndex}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+                        src={images[activeImageIndex]} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">Sem Imagem</div>
+                )}
+            </AnimatePresence>
+            {/* Setas de Navegação (Só se tiver mais de 1 foto) */}
+            {images.length > 1 && (
+                <>
+                    <button onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10 hover:bg-white"><ChevronLeft size={20} /></button>
+                    <button onClick={() => setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10 hover:bg-white"><ChevronRight size={20} /></button>
+                </>
             )}
-        </AnimatePresence>
-        
-        <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white to-transparent"></div>
+          </div>
 
-        {images.length > 1 && (
-            <>
-                <button onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10">
-                    <ChevronLeft size={20} />
-                </button>
-                <button onClick={() => setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10">
-                    <ChevronRight size={20} />
-                </button>
-            </>
-        )}
-      </div>
-
-      {/* MINIATURAS */}
-      <div className="px-6 relative z-10 -mt-12 mb-6">
-        {images.length > 1 && (
-            <div className="flex justify-center gap-2 overflow-x-auto py-2">
+          {/* Miniaturas */}
+          {images.length > 1 && (
+            <div className="px-6 md:px-0 relative z-10 -mt-12 md:mt-6 mb-6 md:mb-0 flex justify-center md:justify-start gap-3 overflow-x-auto py-2 scrollbar-hide">
                 {images.map((img, idx) => (
-                    <button 
-                        key={idx}
-                        onClick={() => setActiveImageIndex(idx)}
-                        className={`w-14 h-14 rounded-xl border-2 overflow-hidden transition-all flex-shrink-0 bg-white ${activeImageIndex === idx ? 'border-black scale-110 shadow-lg' : 'border-white opacity-70'}`}
-                    >
+                    <button key={idx} onClick={() => setActiveImageIndex(idx)} className={`w-20 h-20 rounded-xl border-2 overflow-hidden transition-all flex-shrink-0 bg-white ${activeImageIndex === idx ? 'border-black shadow-lg scale-105' : 'border-white opacity-70 hover:opacity-100'}`}>
                         <img src={img} className="w-full h-full object-cover" />
                     </button>
                 ))}
             </div>
-        )}
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="px-6"
-      >
-        <div className="flex justify-between items-start mb-2">
-            <h1 className="text-3xl font-extrabold leading-tight w-2/3">{product.name}</h1>
-            <div className="flex flex-col items-end">
-                <span className="text-2xl font-bold text-blue-600">{product.price}</span>
-                <span className="text-xs text-gray-400 font-medium">em até 12x</span>
-            </div>
+          )}
         </div>
-        
-        <p className="text-gray-400 text-sm font-medium mb-6 uppercase tracking-wider">{product.category}</p>
 
-        <div className="mb-8">
-          <h3 className="font-bold text-sm mb-3 text-gray-800">Tamanho</h3>
-          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-            {processedSizes.map((size) => (
-              <motion.button 
-                key={size} 
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setSelectedSize(size)}
-                className={`min-w-[50px] h-[50px] rounded-2xl border-2 flex items-center justify-center font-bold text-lg transition-colors ${selectedSize === size ? 'bg-black border-black text-white shadow-lg' : 'bg-white border-gray-200 text-gray-400'}`}
-              >
-                {size}
-              </motion.button>
-            ))}
+        {/* === COLUNA DA DIREITA: DETALHES === */}
+        <div className="px-6 md:px-0 mt-4 md:mt-0 md:sticky md:top-24">
+          
+          {/* Nome e Preço */}
+          <div className="mb-8">
+             <p className="text-gray-400 text-sm font-bold uppercase tracking-wider mb-3">{product.category}</p>
+             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight mb-6">{product.name}</h1>
+             <div className="flex items-center gap-4">
+                <span className="text-4xl font-bold text-blue-600">{product.price}</span>
+                <span className="text-sm text-gray-400 font-medium bg-gray-100 px-3 py-1 rounded-full">em até 12x sem juros</span>
+             </div>
+          </div>
+
+          {/* Seletor de Tamanho */}
+          <div className="mb-10">
+            <h3 className="font-bold text-sm mb-4 text-gray-800 flex justify-between">Tamanhos Disponíveis <span className="text-gray-400 font-normal underline cursor-pointer hover:text-black">Guia de Medidas</span></h3>
+            <div className="flex gap-3 flex-wrap">
+              {processedSizes.map((size) => (
+                <motion.button 
+                  key={size} 
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedSize(size)}
+                  className={`w-16 h-16 rounded-2xl border-2 flex items-center justify-center font-bold text-xl transition-all ${selectedSize === size ? 'bg-black border-black text-white shadow-md scale-105' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black'}`}
+                >
+                  {size}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          {/* Descrição */}
+          <div className="mb-10 space-y-4">
+              <h3 className="font-bold text-lg text-gray-800 border-b pb-3 mb-4">Sobre o Produto</h3>
+              <p className="text-gray-600 text-base leading-relaxed">{product.description}</p>
+          </div>
+
+          {/* Botão de Compra (Visível só no PC) */}
+          <div className="hidden md:block mt-8">
+             <AddToCartButton />
           </div>
         </div>
-
-        <div className="mb-8 space-y-4">
-            <h3 className="font-bold text-sm text-gray-800">Detalhes</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">{product.description}</p>
-        </div>
-      </motion.div>
-      
-       <div className="fixed bottom-0 w-full bg-white/90 backdrop-blur-lg border-t border-gray-100 p-4 pb-8 shadow-2xl z-20">
-        <motion.button 
-          whileTap={{ scale: 0.95 }}
-          className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-3 text-lg shadow-xl ${selectedSize ? 'bg-black text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-          disabled={!selectedSize}
-          onClick={() => {
-             if (!selectedSize) return;
-             const phone = "5511999999999"; 
-             window.open(`https://wa.me/${phone}?text=Olá! Quero comprar o *${product.name}* tamanho *${selectedSize}*`, '_blank');
-          }}
-        >
-          <ShoppingBag size={22} />
-          {selectedSize ? 'Comprar Agora' : 'Escolha um Tamanho'}
-        </motion.button>
       </div>
+      
+       {/* Botão de Compra Fixo (Visível só no Celular) */}
+       <div className="fixed bottom-0 w-full bg-white/90 backdrop-blur-lg border-t border-gray-100 p-4 pb-8 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20 md:hidden">
+          <AddToCartButton mobile />
+       </div>
     </div>
   );
 }
