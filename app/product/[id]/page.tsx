@@ -194,4 +194,4 @@ export default function ProductDetail() {
        </div>
     </div>
   );
-}
+}3

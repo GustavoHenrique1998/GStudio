@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Plus, Save, Image as ImageIcon, LayoutGrid, ArrowLeft, Upload, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 // --- CONEXÃO ---
 const supabase = createClient(
@@ -94,15 +95,14 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      alert('Produto cadastrado com SUCESSO! 🚀');
-      
+      toast.success('Produto criado!')      
       setFormData({
         name: '', price: '', description: '', category: '', image_url: '', gallery: '', sizes: ''
       });
 
     } catch (error) {
       console.error(error);
-      alert('Erro ao cadastrar. Veja o console.');
+      toast.error('Deu ruim!');
     } finally {
       setLoading(false);
     }

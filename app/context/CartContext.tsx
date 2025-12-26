@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import toast from 'react-hot-toast'; // <--- O TOAST AQUI
 
-// Define o que é um Produto no carrinho
 export interface CartItem {
   id: number;
   name: string;
@@ -28,7 +28,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
-  // Carregar carrinho salvo quando o site abre
   useEffect(() => {
     const savedCart = localStorage.getItem('gstudio-cart');
     if (savedCart) {
@@ -36,18 +35,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Salvar carrinho sempre que mudar
   useEffect(() => {
     localStorage.setItem('gstudio-cart', JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (product: any, size: string) => {
     setCart((prev) => {
-      // Verifica se o produto JÁ existe com aquele tamanho
       const existing = prev.find(item => item.id === product.id && item.size === size);
       
       if (existing) {
-        // Se já existe, só aumenta a quantidade
         return prev.map(item => 
           (item.id === product.id && item.size === size)
             ? { ...item, quantity: item.quantity + 1 }
@@ -55,8 +51,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // Se não existe, adiciona novo
-      // Tenta pegar a imagem certa (se for lista ou texto)
       let finalImage = product.image_url;
       if (product.gallery && Array.isArray(product.gallery) && product.gallery.length > 0) {
           finalImage = product.gallery[0];
@@ -71,18 +65,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         quantity: 1
       }];
     });
-    setCartOpen(true); // Abre o carrinho automaticamente ao adicionar
+    setCartOpen(true);
+    // A NOTIFICAÇÃO LINDA:
+    toast.success(`Adicionado à sacola!`, {
+        icon: '🛍️',
+        style: { borderRadius: '10px', background: '#000', color: '#fff' },
+    });
   };
 
   const removeFromCart = (productId: number, size: string) => {
     setCart(prev => prev.filter(item => !(item.id === productId && item.size === size)));
+    toast.error("Item removido", { style: { borderRadius: '10px', background: '#333', color: '#fff' }});
   };
 
   const clearCart = () => setCart([]);
-
   const toggleCart = () => setCartOpen(!cartOpen);
 
-  // Calcula o total (converte "R$ 1.200,00" para número 1200.00)
   const totalValue = cart.reduce((acc, item) => {
     const priceNumber = parseFloat(
       item.price.replace('R$', '').replace('.', '').replace(',', '.').trim()
@@ -97,5 +95,4 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Atalho para usar o carrinho em qualquer lugar
 export const useCart = () => useContext(CartContext);
