@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Star, ArrowRight, Menu, Search, X } from 'lucide-react';
+import { ShoppingBag, Star, ArrowRight, Menu, Search, X, User, Home as HomeIcon, Box, Lock } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from './context/CartContext';
@@ -22,34 +22,32 @@ interface Product {
   gallery: string | string[];
 }
 
-// Lista de Categorias
 const CATEGORIES = ["Todos", "Streetwear", "Casual", "Esporte", "Acessórios"];
 
-// --- DADOS DO CARROSSEL (SLIDES) ---
 const HERO_SLIDES = [
   {
     id: 1,
     badge: "Nova Coleção",
     title: "Streetwear Revolution",
     desc: "Descubra o estilo que define quem você é.",
-    bgClass: "bg-black", // Fundo Preto
-    blobColor: "bg-blue-600" // Luz Azul
+    bgClass: "bg-black",
+    blobColor: "bg-blue-600"
   },
   {
     id: 2,
     badge: "Destaque",
     title: "Conforto & Atitude",
     desc: "Peças essenciais para o seu dia a dia.",
-    bgClass: "bg-zinc-900", // Fundo Cinza Escuro
-    blobColor: "bg-purple-600" // Luz Roxa
+    bgClass: "bg-zinc-900",
+    blobColor: "bg-purple-600"
   },
    {
     id: 3,
     badge: "Imperdível",
     title: "Até 50% OFF",
     desc: "Corra antes que acabe o estoque de verão.",
-    bgClass: "bg-[#0a0a0a]", // Fundo Quase Preto
-    blobColor: "bg-green-600" // Luz Verde
+    bgClass: "bg-[#0a0a0a]",
+    blobColor: "bg-green-600"
   }
 ];
 
@@ -62,16 +60,17 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [searchTerm, setSearchTerm] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  
+  // NOVO: Estado do Menu Lateral
+  const [showMenu, setShowMenu] = useState(false);
+  
   const { cart, toggleCart } = useCart();
-
-  // Estado do Carrossel
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Efeito para rodar o carrossel sozinho
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev === HERO_SLIDES.length - 1 ? 0 : prev + 1));
-    }, 5000); // Troca a cada 5 segundos
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -105,14 +104,72 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900">
       
-      {/* HEADER INTELIGENTE COM LOGO */}
+      {/* MENU LATERAL ESQUERDO (MOBILE MENU) */}
+      <AnimatePresence>
+        {showMenu && (
+          <>
+            {/* Fundo Escuro */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowMenu(false)}
+              className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
+            />
+            {/* A Barra Lateral */}
+            <motion.div 
+              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed top-0 left-0 h-full w-[300px] bg-white z-[70] shadow-2xl p-6 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                   <h2 className="text-xl font-extrabold tracking-tighter">MENU</h2>
+                   <button onClick={() => setShowMenu(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                     <X size={24} />
+                   </button>
+                </div>
+
+                <nav className="space-y-4">
+                  <button onClick={() => { setShowMenu(false); setSelectedCategory('Todos'); }} className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-xl transition-colors font-bold text-gray-700">
+                    <HomeIcon size={20} /> Início
+                  </button>
+                  
+                  <div className="pt-4 border-t border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-3 pl-3">Categorias</p>
+                    {CATEGORIES.filter(c => c !== 'Todos').map(cat => (
+                      <button 
+                        key={cat} 
+                        onClick={() => { setSelectedCategory(cat); setShowMenu(false); }}
+                        className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-xl transition-colors font-medium text-sm text-gray-600"
+                      >
+                        <Box size={18} /> {cat}
+                      </button>
+                    ))}
+                  </div>
+                </nav>
+              </div>
+
+              {/* Área do Admin no Rodapé do Menu */}
+              <div className="pt-6 border-t border-gray-100">
+                 <Link href="/admin" className="flex items-center gap-3 w-full p-4 bg-black text-white rounded-xl font-bold justify-center hover:bg-gray-800 transition-colors">
+                    <Lock size={18} /> Área do Admin
+                 </Link>
+                 <p className="text-center text-xs text-gray-400 mt-4">G-Studio © 2024</p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+
+      {/* HEADER */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-100 px-6 py-4 transition-all">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-black text-white p-2 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors">
+            {/* Botão Menu Ativado */}
+            <button onClick={() => setShowMenu(true)} className="bg-black text-white p-2 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors">
               <Menu className="w-5 h-5" />
-            </div>
-            {/* LOGO AQUI: Substitua o src pela sua logo real depois */}
+            </button>
+            
             <Link href="/">
                 <img 
                     src="https://placehold.co/140x40/000000/ffffff?text=G-STUDIO&font=montserrat" 
@@ -166,7 +223,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* === CARROSSEL ROTATIVO (HERO SLIDER) === */}
+      {/* CARROSSEL */}
       {!searchTerm && selectedCategory === 'Todos' && (
         <section className="px-4 pb-8">
           <div className="relative h-[320px] rounded-[2rem] overflow-hidden shadow-2xl">
@@ -179,7 +236,6 @@ export default function Home() {
                 transition={{ duration: 0.5, ease: "easeInOut" }}
                 className={`${HERO_SLIDES[currentSlide].bgClass} absolute inset-0 p-8 text-white flex flex-col justify-center`}
               >
-                {/* Mancha de Luz Dinâmica */}
                 <div className={`absolute top-0 right-0 w-72 h-72 ${HERO_SLIDES[currentSlide].blobColor} rounded-full blur-[120px] opacity-40 -mr-20 -mt-20 transition-colors duration-1000`}></div>
                 
                 <div className="relative z-10 max-w-xs">
@@ -199,21 +255,16 @@ export default function Home() {
               </motion.div>
             </AnimatePresence>
             
-            {/* Bolinhas indicadoras (Dots) */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
                 {HERO_SLIDES.map((_, index) => (
-                    <button 
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`w-2 h-2 rounded-full transition-all ${currentSlide === index ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`}
-                    />
+                    <button key={index} onClick={() => setCurrentSlide(index)} className={`w-2 h-2 rounded-full transition-all ${currentSlide === index ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`} />
                 ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* LISTA DE PRODUTOS */}
+      {/* PRODUTOS */}
       <main className="px-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">

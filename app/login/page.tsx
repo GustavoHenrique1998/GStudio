@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react'; // Adicionei ArrowLeft
+import Link from 'next/link'; // Importante para o link funcionar
 import toast from 'react-hot-toast';
 
 // --- CONEXÃO ---
@@ -41,7 +42,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 relative">
+      
+      {/* --- BOTÃO DE VOLTAR --- */}
+      <div className="absolute top-6 left-6">
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-600 hover:text-black hover:shadow-md transition-all"
+        >
+          <ArrowLeft size={18} /> Voltar para Loja
+        </Link>
+      </div>
+
       <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
         <div className="text-center mb-8">
           <div className="bg-black text-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
