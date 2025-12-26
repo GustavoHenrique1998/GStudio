@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Plus, Save, Image as ImageIcon, LayoutGrid, ArrowLeft, Upload, Loader2, CheckCircle } from 'lucide-react';
+import { Plus, Save, Image as ImageIcon, LayoutGrid, ArrowLeft, Upload, Loader2, CheckCircle, LogOut } from 'lucide-react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation'; // Para redirecionar
+import toast from 'react-hot-toast'; // Notificações bonitas
 
 // --- CONEXÃO ---
 const supabase = createClient(
@@ -13,8 +14,10 @@ const supabase = createClient(
 );
 
 export default function AdminPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false); // Novo estado para o upload
+  const [checkingAuth, setCheckingAuth] = useState(true); // Verificando se está logado
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -26,43 +29,50 @@ export default function AdminPage() {
     sizes: ''
   });
 
+  // --- 🔒 O PORTEIRO (VERIFICAÇÃO DE SEGURANÇA) ---
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Se não tem usuário, chuta pro login
+        router.push('/login');
+      } else {
+        // Se tem usuário, libera o acesso
+        setCheckingAuth(false);
+      }
+    };
+    checkUser();
+  }, [router]);
+
+  // Função de Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    toast.success('Saiu com sucesso!');
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- FUNÇÃO DE UPLOAD AUTOMÁTICO ---
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-
     const file = e.target.files[0];
     setUploadingImage(true);
 
     try {
-      // 1. Criar um nome único para o arquivo (para não substituir outros)
-      // Ex: 173549202-meu-tenis.png
       const fileName = `${Date.now()}-${file.name.replace(/\s/g, '-')}`;
-
-      // 2. Subir para o Bucket 'images'
-      const { data, error } = await supabase.storage
-        .from('images')
-        .upload(fileName, file);
-
+      const { error } = await supabase.storage.from('images').upload(fileName, file);
       if (error) throw error;
 
-      // 3. Pegar o Link Público
-      const { data: publicUrlData } = supabase.storage
-        .from('images')
-        .getPublicUrl(fileName);
-
-      // 4. Jogar o link direto no formulário
-      setFormData(prev => ({
-        ...prev,
-        image_url: publicUrlData.publicUrl
-      }));
+      const { data: publicUrlData } = supabase.storage.from('images').getPublicUrl(fileName);
+      
+      setFormData(prev => ({ ...prev, image_url: publicUrlData.publicUrl }));
+      toast.success('Imagem carregada!');
 
     } catch (error) {
       console.error('Erro no upload:', error);
-      alert('Erro ao subir imagem. Tente novamente.');
+      toast.error('Erro ao subir imagem.');
     } finally {
       setUploadingImage(false);
     }
@@ -76,7 +86,6 @@ export default function AdminPage() {
       const sizesArray = formData.sizes.split(',').map(s => s.trim()).filter(s => s !== '');
       const galleryArray = formData.gallery.split(',').map(s => s.trim()).filter(s => s !== '');
 
-      // Se a galeria estiver vazia, mas tiver imagem principal, usa ela na galeria também
       if (galleryArray.length === 0 && formData.image_url) {
           galleryArray.push(formData.image_url);
       }
@@ -95,18 +104,22 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      toast.success('Produto criado!')      
+      toast.success('Produto criado com sucesso! 🚀');
+      
       setFormData({
         name: '', price: '', description: '', category: '', image_url: '', gallery: '', sizes: ''
       });
 
     } catch (error) {
       console.error(error);
-      toast.error('Deu ruim!');
+      toast.error('Erro ao cadastrar.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Se estiver verificando, mostra tela em branco ou loading
+  if (checkingAuth) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-20">
@@ -117,9 +130,14 @@ export default function AdminPage() {
              <LayoutGrid className="text-blue-500" />
              <h1 className="text-2xl font-bold">Painel de Controle</h1>
           </div>
-          <Link href="/" className="text-sm text-gray-400 hover:text-white flex items-center gap-2">
-            <ArrowLeft size={16} /> Voltar para Loja
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-sm text-gray-400 hover:text-white flex items-center gap-2">
+                <ArrowLeft size={16} /> Loja
+            </Link>
+            <button onClick={handleLogout} className="text-sm bg-gray-800 hover:bg-red-600 px-3 py-2 rounded-lg transition-colors flex items-center gap-2">
+                <LogOut size={16} /> Sair
+            </button>
+          </div>
         </div>
       </header>
 
@@ -184,7 +202,6 @@ export default function AdminPage() {
               <label className="block text-sm font-bold text-gray-700 mb-3">Imagem Principal (Upload)</label>
               
               <div className="flex items-center gap-4">
-                {/* Botão Bonito que esconde o input feio */}
                 <label className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-all ${uploadingImage ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border border-gray-300 hover:bg-gray-100 text-gray-700'}`}>
                     {uploadingImage ? <Loader2 className="animate-spin" size={18}/> : <Upload size={18}/>}
                     {uploadingImage ? 'Enviando...' : 'Escolher Arquivo'}
@@ -193,11 +210,10 @@ export default function AdminPage() {
                         accept="image/*"
                         onChange={handleImageUpload}
                         disabled={uploadingImage}
-                        className="hidden" // Esconde o input original
+                        className="hidden" 
                     />
                 </label>
 
-                {/* Mostra o link ou status */}
                 {formData.image_url ? (
                     <div className="flex items-center gap-2 text-green-600 text-sm font-bold bg-green-50 px-3 py-1 rounded-full">
                         <CheckCircle size={16}/> Imagem Carregada!
@@ -207,20 +223,11 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Preview da Imagem */}
               {formData.image_url && (
                   <div className="mt-4 w-32 h-32 rounded-lg overflow-hidden border border-gray-200 shadow-sm relative group">
                       <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
                   </div>
               )}
-              
-              {/* Campo oculto mas editável caso queira colar link */}
-              <input 
-                  type="text" name="image_url" 
-                  value={formData.image_url} onChange={handleChange}
-                  className="w-full text-xs text-gray-400 mt-2 bg-transparent border-none focus:ring-0 p-0"
-                  placeholder="Ou cole o link aqui..."
-              />
             </div>
 
             <div>
