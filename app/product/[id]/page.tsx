@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ShoppingBag, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, ChevronRight, ChevronLeft, Share2, Star, Truck, ShieldCheck, FileText, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext'; 
+import toast from 'react-hot-toast';
 
 // --- CONEXÃO ---
 const supabase = createClient(
@@ -28,6 +29,7 @@ interface Product {
 export default function ProductDetail() {
   const params = useParams();
   const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
   
@@ -36,49 +38,90 @@ export default function ProductDetail() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [images, setImages] = useState<string[]>([]);
 
+  // Estado para controlar qual aba do Accordion está aberta
+  // Pode começar com 'desc' aberto ou null (tudo fechado)
+  const [openAccordion, setOpenAccordion] = useState<string | null>('desc');
+
   useEffect(() => {
-    async function fetchProduct() {
-      const { data, error } = await supabase
+    async function fetchProductData() {
+      const { data: currentData, error } = await supabase
         .from('produtos')
         .select('*')
         .eq('id', params.id)
         .single();
 
-      if (!error && data) {
-        setProduct(data);
+      if (!error && currentData) {
+        setProduct(currentData);
         
         // Tratamento Galeria
         let galleryList: string[] = [];
-        if (data.gallery) {
-            if (Array.isArray(data.gallery)) { galleryList = data.gallery; }
-            else if (typeof data.gallery === 'string') {
-                 try { galleryList = JSON.parse(data.gallery.replace(/'/g, '"')); }
-                 catch (e) { galleryList = [data.gallery]; }
+        if (currentData.gallery) {
+            if (Array.isArray(currentData.gallery)) { galleryList = currentData.gallery; }
+            else if (typeof currentData.gallery === 'string') {
+                 try { galleryList = JSON.parse(currentData.gallery.replace(/'/g, '"')); }
+                 catch (e) { galleryList = [currentData.gallery]; }
             }
         }
-        if (galleryList.length === 0 && data.image_url) { galleryList = [data.image_url]; }
+        if (galleryList.length === 0 && currentData.image_url) { galleryList = [currentData.image_url]; }
         setImages(galleryList);
 
         // Tratamento Tamanhos
         let safeSizes: string[] = [];
-        if (data.sizes) {
-            if (Array.isArray(data.sizes)) { safeSizes = data.sizes; }
-            else if (typeof data.sizes === 'string') {
-                try { safeSizes = JSON.parse(data.sizes.replace(/'/g, '"')); }
-                catch (e) { safeSizes = [data.sizes]; }
+        if (currentData.sizes) {
+            if (Array.isArray(currentData.sizes)) { safeSizes = currentData.sizes; }
+            else if (typeof currentData.sizes === 'string') {
+                try { safeSizes = JSON.parse(currentData.sizes.replace(/'/g, '"')); }
+                catch (e) { safeSizes = [currentData.sizes]; }
             }
         }
         setProcessedSizes(safeSizes);
+
+        // Produtos Relacionados
+        const { data: relatedData } = await supabase
+            .from('produtos')
+            .select('*')
+            .neq('id', params.id)
+            .limit(4);
+            
+        if (relatedData) setRelatedProducts(relatedData);
       }
       setLoading(false);
     }
-    if (params.id) fetchProduct();
+    if (params.id) fetchProductData();
   }, [params.id]);
+
+  const handleShare = () => {
+    if (navigator.share) {
+        navigator.share({
+            title: product?.name,
+            text: 'Olha o que eu achei na G-Studio!',
+            url: window.location.href,
+        }).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copiado!", { icon: '🔗' });
+    }
+  };
+
+  const getProductImage = (prod: Product) => {
+      if (prod.image_url) return prod.image_url;
+      try {
+        if(prod.gallery) {
+            const g = typeof prod.gallery === 'string' ? JSON.parse(prod.gallery.replace(/'/g, '"')) : prod.gallery;
+            return Array.isArray(g) && g.length > 0 ? g[0] : null;
+        }
+      } catch(e) { return null; }
+      return null;
+  };
+
+  // Função para alternar o Accordion
+  const toggleAccordion = (id: string) => {
+    setOpenAccordion(openAccordion === id ? null : id);
+  };
 
   if (loading) return <div className="h-screen flex items-center justify-center font-bold animate-pulse">Carregando...</div>;
   if (!product) return <div className="h-screen flex items-center justify-center">Produto não encontrado.</div>;
 
-  // Botão de Adicionar (Reutilizável)
   const AddToCartButton = ({ mobile }: { mobile?: boolean }) => (
     <motion.button 
       whileTap={{ scale: 0.95 }}
@@ -97,19 +140,22 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 pb-32 md:pb-0 md:pt-24">
       
-      {/* Botão Voltar (Ajustado para PC e Mobile) */}
+      {/* Botões Flutuantes */}
       <div className="fixed top-4 left-4 z-20 md:top-8 md:left-8">
         <Link href="/" className="bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-100 flex items-center justify-center hover:scale-105 transition-transform">
           <ArrowLeft size={22} />
         </Link>
       </div>
+      <div className="fixed top-4 right-4 z-20 md:top-8 md:right-8">
+        <button onClick={handleShare} className="bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-100 flex items-center justify-center hover:scale-105 transition-transform text-blue-600">
+          <Share2 size={22} />
+        </button>
+      </div>
 
-      {/* CONTAINER PRINCIPAL (Vira Grid no PC) */}
-      <div className="max-w-7xl mx-auto flex flex-col md:grid md:grid-cols-2 md:gap-16 md:px-8 items-start">
+      <div className="max-w-7xl mx-auto flex flex-col md:grid md:grid-cols-2 md:gap-16 md:px-8 items-start mb-20">
 
-        {/* === COLUNA DA ESQUERDA: IMAGENS === */}
+        {/* === IMAGENS === */}
         <div className="relative w-full">
-          {/* Galeria Principal (AUMENTADA AQUI: md:h-[80vh]) */}
           <div className="h-[50vh] md:h-[80vh] bg-gray-100 relative overflow-hidden group md:rounded-3xl shadow-sm">
             <AnimatePresence mode='wait'>
                 {images.length > 0 ? (
@@ -124,7 +170,6 @@ export default function ProductDetail() {
                     <div className="w-full h-full flex items-center justify-center text-gray-400">Sem Imagem</div>
                 )}
             </AnimatePresence>
-            {/* Setas de Navegação (Só se tiver mais de 1 foto) */}
             {images.length > 1 && (
                 <>
                     <button onClick={() => setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 p-2 rounded-full shadow-md z-10 hover:bg-white"><ChevronLeft size={20} /></button>
@@ -132,8 +177,6 @@ export default function ProductDetail() {
                 </>
             )}
           </div>
-
-          {/* Miniaturas */}
           {images.length > 1 && (
             <div className="px-6 md:px-0 relative z-10 -mt-12 md:mt-6 mb-6 md:mb-0 flex justify-center md:justify-start gap-3 overflow-x-auto py-2 scrollbar-hide">
                 {images.map((img, idx) => (
@@ -145,10 +188,9 @@ export default function ProductDetail() {
           )}
         </div>
 
-        {/* === COLUNA DA DIREITA: DETALHES === */}
+        {/* === DETALHES === */}
         <div className="px-6 md:px-0 mt-4 md:mt-0 md:sticky md:top-24">
           
-          {/* Nome e Preço */}
           <div className="mb-8">
              <p className="text-gray-400 text-sm font-bold uppercase tracking-wider mb-3">{product.category}</p>
              <h1 className="text-4xl md:text-5xl font-extrabold leading-tight mb-6">{product.name}</h1>
@@ -158,9 +200,8 @@ export default function ProductDetail() {
              </div>
           </div>
 
-          {/* Seletor de Tamanho */}
           <div className="mb-10">
-            <h3 className="font-bold text-sm mb-4 text-gray-800 flex justify-between">Tamanhos Disponíveis <span className="text-gray-400 font-normal underline cursor-pointer hover:text-black">Guia de Medidas</span></h3>
+            <h3 className="font-bold text-sm mb-4 text-gray-800 flex justify-between">Tamanhos Disponíveis</h3>
             <div className="flex gap-3 flex-wrap">
               {processedSizes.map((size) => (
                 <motion.button 
@@ -175,23 +216,111 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* Descrição */}
-          <div className="mb-10 space-y-4">
-              <h3 className="font-bold text-lg text-gray-800 border-b pb-3 mb-4">Sobre o Produto</h3>
-              <p className="text-gray-600 text-base leading-relaxed">{product.description}</p>
+          {/* === NOVA ÁREA: ACCORDIONS DE INFORMAÇÃO === */}
+          <div className="mb-10 space-y-2">
+              
+              {/* ITEM 1: DESCRIÇÃO */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggleAccordion('desc')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 font-bold text-gray-800">
+                        <FileText size={20} className="text-blue-600" />
+                        Detalhes do Produto
+                    </div>
+                    <ChevronDown size={20} className={`transition-transform duration-300 ${openAccordion === 'desc' ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                    {openAccordion === 'desc' && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="p-4 text-gray-600 text-sm leading-relaxed border-t border-gray-200">
+                                {product.description}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+              </div>
+
+              {/* ITEM 2: FRETE (Estático) */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggleAccordion('shipping')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 font-bold text-gray-800">
+                        <Truck size={20} className="text-green-600" />
+                        Envio e Prazos
+                    </div>
+                    <ChevronDown size={20} className={`transition-transform duration-300 ${openAccordion === 'shipping' ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                    {openAccordion === 'shipping' && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="p-4 text-gray-600 text-sm leading-relaxed border-t border-gray-200">
+                                <p className="mb-2">📦 <strong>Envio Rápido:</strong> Postamos seu pedido em até 24h úteis após a confirmação.</p>
+                                <p>Todos os envios possuem código de rastreio e seguro contra extravio. O prazo varia de acordo com sua região, calculado no checkout.</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+              </div>
+
+              {/* ITEM 3: GARANTIA (Estático) */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggleAccordion('warranty')} className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3 font-bold text-gray-800">
+                        <ShieldCheck size={20} className="text-purple-600" />
+                        Garantia e Troca Fácil
+                    </div>
+                    <ChevronDown size={20} className={`transition-transform duration-300 ${openAccordion === 'warranty' ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                    {openAccordion === 'warranty' && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="p-4 text-gray-600 text-sm leading-relaxed border-t border-gray-200">
+                                <p className="mb-2">✅ <strong>Garantia de 30 dias</strong> contra defeitos de fabricação.</p>
+                                <p>Não serviu? A primeira troca é por nossa conta! Você tem até 7 dias após o recebimento para solicitar a devolução ou troca sem custo.</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+              </div>
+
           </div>
 
-          {/* Botão de Compra (Visível só no PC) */}
           <div className="hidden md:block mt-8">
              <AddToCartButton />
           </div>
         </div>
       </div>
       
-       {/* Botão de Compra Fixo (Visível só no Celular) */}
+       {/* RELACIONADOS */}
+       {relatedProducts.length > 0 && (
+           <section className="px-6 md:px-8 max-w-7xl mx-auto mt-20 mb-12 border-t border-gray-100 pt-12">
+               <h3 className="text-2xl font-bold mb-8 flex items-center gap-2">Quem viu, comprou também <Star className="fill-yellow-400 text-yellow-400" size={20}/></h3>
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   {relatedProducts.map((relProd) => {
+                       const img = getProductImage(relProd);
+                       return (
+                           <Link key={relProd.id} href={`/product/${relProd.id}`} className="block group">
+                                <div className="bg-gray-50 rounded-2xl p-3 hover:shadow-lg transition-all duration-300">
+                                    <div className="aspect-square bg-white rounded-xl mb-3 overflow-hidden relative">
+                                        {img ? (
+                                            <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Sem Foto</div>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">{relProd.category}</p>
+                                    <h4 className="font-bold text-sm text-gray-800 line-clamp-1 mb-1">{relProd.name}</h4>
+                                    <span className="font-bold text-blue-600 text-sm">{relProd.price}</span>
+                                </div>
+                           </Link>
+                       );
+                   })}
+               </div>
+           </section>
+       )}
+
+       {/* Mobile Button */}
        <div className="fixed bottom-0 w-full bg-white/90 backdrop-blur-lg border-t border-gray-100 p-4 pb-8 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-20 md:hidden">
           <AddToCartButton mobile />
        </div>
     </div>
   );
-}3
+}
