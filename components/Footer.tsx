@@ -1,85 +1,73 @@
 "use client";
 
 import React from 'react';
-import { Instagram, Facebook, Twitter, ArrowRight, Lock } from 'lucide-react';
-import Link from 'next/link'; // <--- IMPORTANTE
+import Link from 'next/link';
+import { Instagram, Facebook, Twitter, Mail, MapPin, Phone } from 'lucide-react';
 
 export default function Footer() {
+  
+  // Função para rolar até a loja na Home
+  const scrollToShop = () => {
+    const shopSection = document.getElementById('shop-section');
+    if (shopSection) {
+        shopSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        window.location.href = "/#shop-section";
+    }
+  };
+
   return (
-    <footer className="bg-black text-white pt-16 pb-8 border-t border-gray-900 mt-auto">
+    <footer className="bg-black text-white pt-16 pb-8 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-6">
         
-        {/* GRID DE COLUNAS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           
-          {/* COLUNA 1: MARCA */}
+          {/* Marca */}
           <div className="space-y-4">
             <h3 className="text-2xl font-black tracking-tighter">G-STUDIO.</h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Redefinindo o streetwear com peças exclusivas. Feito para quem cria.
-            </p>
+            <p className="text-gray-400 text-sm">Streetwear premium e exclusivo.</p>
             <div className="flex gap-4 pt-2">
-              <a href="https://instagram.com" target="_blank" className="p-2 bg-gray-900 rounded-full hover:bg-white hover:text-black transition-all"><Instagram size={18}/></a>
-              <a href="https://facebook.com" target="_blank" className="p-2 bg-gray-900 rounded-full hover:bg-white hover:text-black transition-all"><Facebook size={18}/></a>
-              <a href="https://twitter.com" target="_blank" className="p-2 bg-gray-900 rounded-full hover:bg-white hover:text-black transition-all"><Twitter size={18}/></a>
+                <button className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center hover:bg-white hover:text-black"><Instagram size={20}/></button>
+                <button className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center hover:bg-white hover:text-black"><Facebook size={20}/></button>
             </div>
           </div>
 
-          {/* COLUNA 2: NAVEGAÇÃO (Links para Home) */}
+          {/* Explorar (Funciona!) */}
           <div>
-            <h4 className="font-bold text-lg mb-6">Loja</h4>
+            <h4 className="font-bold text-lg mb-6">Explorar</h4>
             <ul className="space-y-3 text-sm text-gray-400">
-              {/* Como é "Single Page", mandamos para a Home */}
-              <li><Link href="/" className="hover:text-white transition-colors">Início</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Lançamentos</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Coleções</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Outlet</Link></li>
+                <li><button onClick={scrollToShop} className="hover:text-white text-left">Lançamentos</button></li>
+                <li><button onClick={scrollToShop} className="hover:text-white text-left">Coleções</button></li>
+                <li><button onClick={scrollToShop} className="hover:text-white text-left">Todos os Produtos</button></li>
             </ul>
           </div>
 
-          {/* COLUNA 3: INSTITUCIONAL (Links para a página Sobre) */}
+          {/* Ajuda (Agora existe!) */}
           <div>
-            <h4 className="font-bold text-lg mb-6">Suporte</h4>
+            <h4 className="font-bold text-lg mb-6">Ajuda</h4>
             <ul className="space-y-3 text-sm text-gray-400">
-              <li><Link href="/sobre" className="hover:text-white transition-colors">Quem Somos</Link></li>
-              <li><Link href="/sobre" className="hover:text-white transition-colors">Prazos de Entrega</Link></li>
-              <li><Link href="/sobre" className="hover:text-white transition-colors">Trocas e Devoluções</Link></li>
-              
-              {/* LINK SECRETO DO ADMIN */}
-              <li className="pt-4">
-                  <Link href="/admin" className="hover:text-blue-400 transition-colors flex items-center gap-2 text-xs opacity-50 hover:opacity-100">
-                      <Lock size={12}/> Área Restrita
-                  </Link>
-              </li>
+                <li><Link href="/ajuda#trocas" className="hover:text-white">Trocas e Devoluções</Link></li>
+                <li><Link href="/ajuda#envios" className="hover:text-white">Prazos de Entrega</Link></li>
+                <li><Link href="/ajuda#pagamento" className="hover:text-white">Pagamentos</Link></li>
+                <li><Link href="/admin" className="hover:text-white font-bold text-gray-600 mt-2 block">Área do Vendedor</Link></li>
             </ul>
           </div>
 
-          {/* COLUNA 4: NEWSLETTER */}
+          {/* Contato */}
           <div>
-            <h4 className="font-bold text-lg mb-6">Novidades</h4>
-            <p className="text-gray-400 text-sm mb-4">Cadastre-se para receber drops exclusivos.</p>
-            <div className="relative">
-              <input 
-                type="email" 
-                placeholder="Seu e-mail..." 
-                className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-white text-sm"
-              />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white text-black rounded-md hover:bg-gray-200">
-                <ArrowRight size={16}/>
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        {/* COPYRIGHT */}
-        <div className="border-t border-gray-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-500">© 2024 G-Studio. Todos os direitos reservados.</p>
-          <div className="flex items-center gap-3 opacity-50 grayscale hover:grayscale-0 transition-all">
-             <div className="h-6 w-10 bg-white rounded flex items-center justify-center"><span className="text-[8px] font-bold text-black">VISA</span></div>
-             <div className="h-6 w-10 bg-white rounded flex items-center justify-center"><span className="text-[8px] font-bold text-black">PIX</span></div>
+            <h4 className="font-bold text-lg mb-6">Contato</h4>
+            <ul className="space-y-4 text-sm text-gray-400">
+                <li className="flex items-center gap-3"><Mail size={18}/> suporte@gstudio.com</li>
+                <li className="flex items-center gap-3"><Phone size={18}/> (11) 99999-9999</li>
+            </ul>
           </div>
         </div>
+
+        <div className="border-t border-gray-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
+            <p>© 2025 G-Studio. Todos os direitos reservados.</p>
+            <p>Design by G-Studio</p>
+        </div>
+
       </div>
     </footer>
   );

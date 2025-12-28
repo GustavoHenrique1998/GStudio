@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat } from "next/font/google"; 
+import { Inter } from "next/font/google";
 import "./globals.css";
-import WhatsAppButton from "@/components/WhatsAppButton";
-import { CartProvider } from "./context/CartContext"; 
-import CartSidebar from "@/components/CartSidebar"; 
-import Footer from "@/components/Footer"; 
-import NewsletterModal from "@/components/NewsletterModal";
-import WishlistSidebar from "./wishlist/page";
-// 👇 IMPORTAR A TOPBAR
-import TopBar from "@/components/TopBar"; 
-import { Toaster } from 'react-hot-toast';
+import { CartProvider } from "./context/CartContext";
+import CartSidebar from "../components/CartSidebar";
+import TopBar from "../components/TopBar"; // Se estiver usando
+import Footer from "../components/Footer"; // Se estiver usando
 
-const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
-const montserrat = Montserrat({ subsets: ["latin"], weight: ['400', '700', '900'], variable: '--font-montserrat' });
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "G-Studio | Streetwear Premium",
-  description: "Loja oficial.",
+  title: "G-STUDIO | Streetwear Premium",
+  description: "A melhor loja de streetwear do Brasil. Tênis, Roupas e Acessórios exclusivos.",
+  icons: {
+    icon: "/favicon.ico", // Você pode trocar o ícone depois colocando um arquivo na pasta public
+  },
 };
 
 export default function RootLayout({
@@ -25,27 +22,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-br">
-      <body className={`${inter.variable} ${montserrat.variable} font-sans antialiased bg-gray-50`}>
+    <html lang="pt-BR">
+      <body className={inter.className}>
         <CartProvider>
-            <Toaster position="top-center" />
-            
-            {/* 👇 TOPBAR FICA AQUI, NO TOPO DE TUDO */}
+            {/* O CartSidebar e TopBar ficam aqui para aparecer em todas as páginas */}
             <TopBar />
-
-            <NewsletterModal /> 
-            <CartSidebar /> 
-            <WishlistSidebar /> 
+            <CartSidebar />
             
-            {/* Adicionei padding-top na div principal para compensar a altura do TopBar se necessário, 
-                mas como a Navbar é fixed, o TopBar vai ficar acima dela naturalmente se ajustar o CSS da Navbar */}
-            <div className="min-h-screen">
-               {children}
-            </div>
-
-            <WhatsAppButton />
+            {children}
+            
             <Footer />
-            
         </CartProvider>
       </body>
     </html>

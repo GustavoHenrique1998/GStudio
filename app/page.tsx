@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { ShoppingBag, ArrowRight, Search, Filter, X, Menu, Instagram, Facebook, Twitter, ChevronRight, LogIn, Truck, CreditCard, ShieldCheck, RefreshCw, Heart } from 'lucide-react';
+import { ShoppingBag, ArrowRight, Search, Filter, X, Menu, Instagram, Facebook, Twitter, ChevronRight, LogIn, Truck, CreditCard, ShieldCheck, RefreshCw, Heart, HelpCircle } from 'lucide-react';
 import { useCart } from './context/CartContext'; 
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -55,7 +55,14 @@ export default function Home() {
     setFilteredProducts(result);
   }, [searchTerm, selectedCategory, products]);
 
-  // Função Auxiliar: Calcular Parcelamento
+  // Função para rolar até a loja
+  const scrollToShop = () => {
+    const shopSection = document.getElementById('shop-section');
+    if (shopSection) {
+        shopSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const getInstallments = (priceStr: string) => {
       try {
           const numericPrice = parseFloat(priceStr.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
@@ -80,15 +87,28 @@ export default function Home() {
               </div>
               <div className="flex-1 overflow-y-auto py-4 px-6 space-y-2">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 mt-2">Navegação</p>
-                  <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">Lançamentos <ChevronRight size={18} className="text-gray-400"/></a>
-                  <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">Coleções <ChevronRight size={18} className="text-gray-400"/></a>
+                  
+                  {/* Links Mobile Corrigidos */}
+                  <button onClick={() => { setIsMobileMenuOpen(false); scrollToShop(); }} className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors text-left">
+                      Lançamentos <ChevronRight size={18} className="text-gray-400"/>
+                  </button>
+                  <button onClick={() => { setIsMobileMenuOpen(false); scrollToShop(); }} className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors text-left">
+                      Coleções <ChevronRight size={18} className="text-gray-400"/>
+                  </button>
+                  
+                  {/* Link para Ajuda */}
+                  <Link href="/ajuda" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">
+                      <span className="flex items-center gap-2"><HelpCircle size={18} className="text-blue-600"/> Central de Ajuda</span> 
+                      <ChevronRight size={18} className="text-gray-400"/>
+                  </Link>
+
                   <Link href="/wishlist" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">
                       <span className="flex items-center gap-2"><Heart size={18} className="text-red-500 fill-red-500"/> Meus Favoritos</span> 
                       <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full">{wishlist.length}</span>
                   </Link>
-                  <Link href="/sobre" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">Sobre Nós <ChevronRight size={18} className="text-gray-400"/></Link>
+
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 mt-8">Conta</p>
-                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl font-medium text-gray-600 hover:border-black hover:text-black transition-all"><LogIn size={20} /> Área Administrativa</Link>
+                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl font-medium text-gray-600 hover:border-black hover:text-black transition-all"><LogIn size={20} /> Área do Vendedor</Link>
               </div>
               <div className="p-6 border-t border-gray-100 bg-gray-50">
                   <p className="text-xs text-center text-gray-400 mb-4">Siga-nos nas redes</p>
@@ -99,18 +119,19 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* NAVBAR (AGORA É STICKY: Rola com a página e gruda no topo quando chega lá) */}
+      {/* NAVBAR STICKY */}
       <nav className="sticky top-0 w-full bg-white/95 backdrop-blur-md z-40 border-b border-gray-100 transition-all shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <Link href="/" className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                 <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">G</div>
                 <span className="font-black text-xl tracking-tighter">G-STUDIO.</span>
-            </div>
+            </Link>
             
+            {/* Links Desktop Corrigidos */}
             <div className="hidden md:flex gap-8 text-sm font-bold text-gray-500">
-                <a href="#" className="hover:text-black transition-colors">Lançamentos</a>
-                <a href="#" className="hover:text-black transition-colors">Coleções</a>
-                <Link href="/sobre" className="hover:text-black transition-colors">Ajuda</Link>
+                <button onClick={scrollToShop} className="hover:text-black transition-colors">Lançamentos</button>
+                <button onClick={scrollToShop} className="hover:text-black transition-colors">Coleções</button>
+                <Link href="/ajuda" className="hover:text-black transition-colors flex items-center gap-1">Ajuda</Link>
             </div>
 
             <div className="flex items-center gap-2 md:gap-4">
@@ -128,7 +149,6 @@ export default function Home() {
       </nav>
 
       {/* HERO SECTION (BANNER) */}
-      {/* Removemos o padding fixo (pt-44) e usamos margem natural (mt-8) */}
       <header className="px-4 md:px-6 mt-6 md:mt-10 mb-8">
         <div className="max-w-7xl mx-auto bg-black rounded-2xl p-6 md:p-10 text-white relative overflow-hidden shadow-xl">
           <div className="relative z-10 max-w-2xl">
@@ -137,7 +157,7 @@ export default function Home() {
               Estilo que define <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">sua atitude.</span>
             </h1>
             <p className="text-gray-400 mb-6 text-sm md:text-base max-w-lg">Peças exclusivas com design minimalista e qualidade premium.</p>
-            <button onClick={() => document.getElementById('shop-section')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white text-black px-6 py-3 rounded-full font-bold text-sm hover:scale-105 transition-transform flex items-center gap-2">
+            <button onClick={scrollToShop} className="bg-white text-black px-6 py-3 rounded-full font-bold text-sm hover:scale-105 transition-transform flex items-center gap-2">
               Explorar Loja <ArrowRight size={16}/>
             </button>
           </div>
@@ -146,7 +166,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* FILTROS E BUSCA (Sticky também, fica logo abaixo do menu) */}
+      {/* FILTROS E BUSCA */}
       <section id="shop-section" className="max-w-7xl mx-auto px-6 mb-8 sticky top-16 md:top-20 z-30 bg-white/95 backdrop-blur-sm py-4 -mx-6 md:mx-auto md:rounded-b-2xl border-b border-gray-100 md:border-none shadow-sm md:shadow-none transition-all">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
