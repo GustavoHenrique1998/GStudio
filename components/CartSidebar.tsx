@@ -110,7 +110,7 @@ export default function CartSidebar() {
     message += `\n*Total Final: ${formatMoney(total)}*`;
     
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/5511999999999?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/55116993326508?text=${encodedMessage}`, '_blank');
   };
 
   return (

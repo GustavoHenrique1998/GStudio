@@ -1,66 +1,83 @@
+"use client";
+
 import React from 'react';
-import { Facebook, Instagram, Twitter } from 'lucide-react';
+import { Instagram, Facebook, Twitter, ArrowRight, Lock } from 'lucide-react';
+import Link from 'next/link'; // <--- IMPORTANTE
 
 export default function Footer() {
   return (
-    <footer className="bg-black text-white pt-16 pb-8 border-t border-gray-800">
-      <div className="max-w-6xl mx-auto px-6">
+    <footer className="bg-black text-white pt-16 pb-8 border-t border-gray-900 mt-auto">
+      <div className="max-w-7xl mx-auto px-6">
+        
+        {/* GRID DE COLUNAS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           
-          {/* Coluna 1 - Marca */}
+          {/* COLUNA 1: MARCA */}
           <div className="space-y-4">
-            <h3 className="text-2xl font-extrabold tracking-tighter">G-STUDIO</h3>
+            <h3 className="text-2xl font-black tracking-tighter">G-STUDIO.</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Redefinindo o streetwear com exclusividade e qualidade premium. Seu estilo, nossa missão.
+              Redefinindo o streetwear com peças exclusivas. Feito para quem cria.
             </p>
             <div className="flex gap-4 pt-2">
-              <div className="bg-gray-800 p-2 rounded-full hover:bg-white hover:text-black transition-colors cursor-pointer"><Instagram size={18} /></div>
-              <div className="bg-gray-800 p-2 rounded-full hover:bg-white hover:text-black transition-colors cursor-pointer"><Twitter size={18} /></div>
-              <div className="bg-gray-800 p-2 rounded-full hover:bg-white hover:text-black transition-colors cursor-pointer"><Facebook size={18} /></div>
+              <a href="https://instagram.com" target="_blank" className="p-2 bg-gray-900 rounded-full hover:bg-white hover:text-black transition-all"><Instagram size={18}/></a>
+              <a href="https://facebook.com" target="_blank" className="p-2 bg-gray-900 rounded-full hover:bg-white hover:text-black transition-all"><Facebook size={18}/></a>
+              <a href="https://twitter.com" target="_blank" className="p-2 bg-gray-900 rounded-full hover:bg-white hover:text-black transition-all"><Twitter size={18}/></a>
             </div>
           </div>
 
-          {/* Coluna 2 - Links */}
+          {/* COLUNA 2: NAVEGAÇÃO (Links para Home) */}
           <div>
-            <h4 className="font-bold mb-6 text-lg">Loja</h4>
-            <ul className="space-y-4 text-gray-400 text-sm">
-              <li className="hover:text-white cursor-pointer transition-colors">Lançamentos</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Coleção de Verão</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Mais Vendidos</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Ofertas</li>
+            <h4 className="font-bold text-lg mb-6">Loja</h4>
+            <ul className="space-y-3 text-sm text-gray-400">
+              {/* Como é "Single Page", mandamos para a Home */}
+              <li><Link href="/" className="hover:text-white transition-colors">Início</Link></li>
+              <li><Link href="/" className="hover:text-white transition-colors">Lançamentos</Link></li>
+              <li><Link href="/" className="hover:text-white transition-colors">Coleções</Link></li>
+              <li><Link href="/" className="hover:text-white transition-colors">Outlet</Link></li>
             </ul>
           </div>
 
-          {/* Coluna 3 - Suporte */}
+          {/* COLUNA 3: INSTITUCIONAL (Links para a página Sobre) */}
           <div>
-            <h4 className="font-bold mb-6 text-lg">Suporte</h4>
-            <ul className="space-y-4 text-gray-400 text-sm">
-              <li className="hover:text-white cursor-pointer transition-colors">Rastrear Pedido</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Trocas e Devoluções</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Guia de Tamanhos</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Fale Conosco</li>
+            <h4 className="font-bold text-lg mb-6">Suporte</h4>
+            <ul className="space-y-3 text-sm text-gray-400">
+              <li><Link href="/sobre" className="hover:text-white transition-colors">Quem Somos</Link></li>
+              <li><Link href="/sobre" className="hover:text-white transition-colors">Prazos de Entrega</Link></li>
+              <li><Link href="/sobre" className="hover:text-white transition-colors">Trocas e Devoluções</Link></li>
+              
+              {/* LINK SECRETO DO ADMIN */}
+              <li className="pt-4">
+                  <Link href="/admin" className="hover:text-blue-400 transition-colors flex items-center gap-2 text-xs opacity-50 hover:opacity-100">
+                      <Lock size={12}/> Área Restrita
+                  </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Coluna 4 - Pagamento */}
+          {/* COLUNA 4: NEWSLETTER */}
           <div>
-            <h4 className="font-bold mb-6 text-lg">Pagamento Seguro</h4>
-            <p className="text-gray-400 text-sm mb-4">Aceitamos todas as bandeiras e Pix.</p>
-            <div className="flex gap-2 opacity-70">
-               {/* Simulação de ícones de cartão */}
-               <div className="w-10 h-6 bg-gray-700 rounded"></div>
-               <div className="w-10 h-6 bg-gray-700 rounded"></div>
-               <div className="w-10 h-6 bg-gray-700 rounded"></div>
-               <div className="w-10 h-6 bg-gray-700 rounded"></div>
+            <h4 className="font-bold text-lg mb-6">Novidades</h4>
+            <p className="text-gray-400 text-sm mb-4">Cadastre-se para receber drops exclusivos.</p>
+            <div className="relative">
+              <input 
+                type="email" 
+                placeholder="Seu e-mail..." 
+                className="w-full bg-gray-900 border border-gray-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-white text-sm"
+              />
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white text-black rounded-md hover:bg-gray-200">
+                <ArrowRight size={16}/>
+              </button>
             </div>
           </div>
+
         </div>
 
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-xs">© 2025 G-Studio Inc. Todos os direitos reservados.</p>
-          <div className="flex gap-6 text-gray-500 text-xs">
-            <span className="cursor-pointer hover:text-white">Privacidade</span>
-            <span className="cursor-pointer hover:text-white">Termos</span>
+        {/* COPYRIGHT */}
+        <div className="border-t border-gray-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-gray-500">© 2024 G-Studio. Todos os direitos reservados.</p>
+          <div className="flex items-center gap-3 opacity-50 grayscale hover:grayscale-0 transition-all">
+             <div className="h-6 w-10 bg-white rounded flex items-center justify-center"><span className="text-[8px] font-bold text-black">VISA</span></div>
+             <div className="h-6 w-10 bg-white rounded flex items-center justify-center"><span className="text-[8px] font-bold text-black">PIX</span></div>
           </div>
         </div>
       </div>

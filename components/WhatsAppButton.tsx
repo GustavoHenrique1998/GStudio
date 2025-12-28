@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 export default function WhatsAppButton() {
   return (
     <motion.a
-      href="https://wa.me/5511999999999?text=Olá! Vim pelo site da G-Studio."
+      href="https://wa.me/5516993326508?text=Olá! Vim pelo site da G-Studio."
       target="_blank"
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
