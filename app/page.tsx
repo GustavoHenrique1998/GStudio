@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ShoppingBag, Star, ArrowRight, Menu, Search, X, User, Home as HomeIcon, Box, Lock, Mail, Send } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
+import { ShoppingBag, ArrowRight, Search, Filter, X, Menu, Instagram, Facebook, Twitter, ChevronRight, User, LogIn } from 'lucide-react';
+import { useCart } from './context/CartContext'; 
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCart } from './context/CartContext';
-import toast from 'react-hot-toast';
 
-// --- CONEXÃO ---
+// --- CONEXÃO SUPABASE ---
 const supabase = createClient(
   "https://ngnzibntpncdcrkoktus.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nbnppYm50cG5jZGNya29rdHVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4MDM2MzksImV4cCI6MjA4MTM3OTYzOX0.OujKy3UrxekqE47FWm9mBHKVmNtVxEY-GILQDJCHv3I"
@@ -20,291 +19,244 @@ interface Product {
   price: string;
   category: string;
   image_url: string;
-  gallery: string | string[];
 }
 
-const CATEGORIES = ["Todos", "Streetwear", "Casual", "Esporte", "Acessórios"];
-
-const HERO_SLIDES = [
-  {
-    id: 1,
-    badge: "Nova Coleção",
-    title: "Streetwear Revolution",
-    desc: "Descubra o estilo que define quem você é.",
-    bgClass: "bg-black",
-    blobColor: "bg-blue-600"
-  },
-  {
-    id: 2,
-    badge: "Destaque",
-    title: "Conforto & Atitude",
-    desc: "Peças essenciais para o seu dia a dia.",
-    bgClass: "bg-zinc-900",
-    blobColor: "bg-purple-600"
-  },
-   {
-    id: 3,
-    badge: "Imperdível",
-    title: "Até 50% OFF",
-    desc: "Corra antes que acabe o estoque de verão.",
-    bgClass: "bg-[#0a0a0a]",
-    blobColor: "bg-green-600"
-  }
-];
-
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+interface CartItem {
+  id: number;
+  name: string;
+  quantity: number;
+}
 
 export default function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("Todos");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const { cart, toggleCart } = useCart();
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [emailNews, setEmailNews] = useState("");
+  const context = useCart();
+  const { toggleCart, cart } = (context || {}) as unknown as { 
+    toggleCart: () => void, 
+    cart: CartItem[] 
+  };
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev === HERO_SLIDES.length - 1 ? 0 : prev + 1));
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const CATEGORIES = ["Todos", "Streetwear", "Casual", "Esporte", "Acessórios"];
 
   useEffect(() => {
     async function fetchProducts() {
-      const { data, error } = await supabase.from('produtos').select('*');
-      if (!error) setProducts(data || []);
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('id, name, price, category, image_url')
+        .order('id', { ascending: false });
+
+      if (!error && data) {
+        setProducts(data);
+        setFilteredProducts(data);
+      }
       setLoading(false);
     }
     fetchProducts();
   }, []);
 
-  const handleNewsSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if(emailNews) {
-        toast.success("Cadastrado! Verifique seu e-mail.", {
-            icon: '📩',
-            style: { borderRadius: '10px', background: '#333', color: '#fff' },
-        });
-        setEmailNews("");
+  useEffect(() => {
+    let result = products;
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(lowerSearch) || 
+        p.category.toLowerCase().includes(lowerSearch)
+      );
     }
-  };
-
-  const filteredProducts = products.filter(product => {
-    const categoryMatch = selectedCategory === "Todos" || product.category === selectedCategory;
-    const searchMatch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return categoryMatch && searchMatch;
-  });
-
-  const getMainImage = (product: Product) => {
-    if (product.image_url) return product.image_url;
-    if (product.gallery) {
-        try {
-            let gallery = product.gallery;
-            if (typeof gallery === 'string') { gallery = JSON.parse(gallery.replace(/'/g, '"')); }
-            if (Array.isArray(gallery) && gallery.length > 0) { return gallery[0]; }
-        } catch (e) { return null; }
+    if (selectedCategory !== "Todos") {
+      result = result.filter(p => p.category === selectedCategory);
     }
-    return null;
-  };
+    setFilteredProducts(result);
+  }, [searchTerm, selectedCategory, products]);
+
+  // Bloquear rolagem da página quando o menu estiver aberto
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMobileMenuOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+    <div className="min-h-screen bg-white font-sans text-gray-900 pb-20">
       
-      {/* MENU LATERAL */}
+      {/* --- MENU MOBILE LATERAL (NOVO ESTILO) --- */}
       <AnimatePresence>
-        {showMenu && (
+        {isMobileMenuOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowMenu(false)} className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm" />
-            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="fixed top-0 left-0 h-full w-[300px] bg-white z-[70] shadow-2xl p-6 flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-center mb-8">
-                   <h2 className="text-xl font-extrabold tracking-tighter">MENU</h2>
-                   <button onClick={() => setShowMenu(false)} className="p-2 hover:bg-gray-100 rounded-full"><X size={24} /></button>
-                </div>
-                <nav className="space-y-4">
-                  <button onClick={() => { setShowMenu(false); setSelectedCategory('Todos'); }} className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-xl transition-colors font-bold text-gray-700"><HomeIcon size={20} /> Início</button>
-                  <div className="pt-4 border-t border-gray-100">
-                    <p className="text-xs font-bold text-gray-400 uppercase mb-3 pl-3">Categorias</p>
-                    {CATEGORIES.filter(c => c !== 'Todos').map(cat => (
-                      <button key={cat} onClick={() => { setSelectedCategory(cat); setShowMenu(false); }} className="flex items-center gap-3 w-full p-3 hover:bg-gray-50 rounded-xl transition-colors font-medium text-sm text-gray-600"><Box size={18} /> {cat}</button>
-                    ))}
+            {/* Fundo Escuro com Blur */}
+            <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }} 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            />
+            
+            {/* O Menu Deslizante */}
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed top-0 right-0 h-full w-[85%] max-w-[320px] bg-white z-[70] shadow-2xl flex flex-col"
+            >
+              {/* Cabeçalho do Menu */}
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+                  <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">G</div>
+                      <span className="font-black text-lg tracking-tighter">MENU</span>
                   </div>
-                </nav>
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors">
+                      <X size={20} />
+                  </button>
               </div>
-              <div className="pt-6 border-t border-gray-100">
-                 <Link href="/admin" className="flex items-center gap-3 w-full p-4 bg-black text-white rounded-xl font-bold justify-center hover:bg-gray-800 transition-colors"><Lock size={18} /> Área do Admin</Link>
-                 <p className="text-center text-xs text-gray-400 mt-4">G-Studio © 2024</p>
+
+              {/* Corpo do Menu */}
+              <div className="flex-1 overflow-y-auto py-4 px-6 space-y-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 mt-2">Navegação</p>
+                  
+                  <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">
+                      Lançamentos <ChevronRight size={18} className="text-gray-400"/>
+                  </a>
+                  <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">
+                      Coleções <ChevronRight size={18} className="text-gray-400"/>
+                  </a>
+                  <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl font-bold text-gray-800 hover:bg-gray-100 transition-colors">
+                      Sobre Nós <ChevronRight size={18} className="text-gray-400"/>
+                  </a>
+
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 mt-8">Conta</p>
+                  
+                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl font-medium text-gray-600 hover:border-black hover:text-black transition-all">
+                      <LogIn size={20} /> Área Administrativa
+                  </Link>
+              </div>
+
+              {/* Rodapé do Menu */}
+              <div className="p-6 border-t border-gray-100 bg-gray-50">
+                  <p className="text-xs text-center text-gray-400 mb-4">Siga-nos nas redes</p>
+                  <div className="flex justify-center gap-6 text-gray-400">
+                      <Instagram size={24} className="hover:text-pink-600 cursor-pointer transition-colors"/>
+                      <Facebook size={24} className="hover:text-blue-600 cursor-pointer transition-colors"/>
+                      <Twitter size={24} className="hover:text-blue-400 cursor-pointer transition-colors"/>
+                  </div>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
 
-      {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-100 px-6 py-4 transition-all">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowMenu(true)} className="bg-black text-white p-2 rounded-lg cursor-pointer hover:bg-gray-800 transition-colors"><Menu className="w-5 h-5" /></button>
-            <Link href="/">
-                <img src="https://placehold.co/140x40/000000/ffffff?text=G-STUDIO&font=montserrat" alt="G-Studio Logo" className="h-10 w-auto object-contain" />
-            </Link>
-          </div>
-          <div className="flex gap-4 items-center">
-             <button onClick={() => setShowSearch(!showSearch)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">{showSearch ? <X className="w-6 h-6" /> : <Search className="w-6 h-6 text-gray-400" />}</button>
-             <button onClick={toggleCart} className="relative p-1 hover:bg-gray-100 rounded-full transition-colors">
-               <ShoppingBag className="w-6 h-6 text-black" />
-               {cart.length > 0 && (
-                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{cart.reduce((acc, item) => acc + item.quantity, 0)}</span>
-               )}
-             </button>
-          </div>
+
+      {/* HEADER / NAVBAR */}
+      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-40 border-b border-gray-100 transition-all">
+        <div className="max-w-7xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">G</div>
+                <span className="font-black text-xl tracking-tighter">G-STUDIO.</span>
+            </div>
+            <div className="hidden md:flex gap-8 text-sm font-bold text-gray-500">
+                <a href="#" className="hover:text-black transition-colors">Lançamentos</a>
+                <a href="#" className="hover:text-black transition-colors">Coleções</a>
+                <a href="#" className="hover:text-black transition-colors">Sobre</a>
+            </div>
+            <div className="flex items-center gap-4">
+                <button onClick={toggleCart} className="relative p-2 hover:bg-gray-100 rounded-full transition-colors group">
+                    <ShoppingBag size={22} className="text-gray-700 group-hover:text-black"/>
+                    {cart && cart.length > 0 && (
+                        <span className="absolute top-0 right-0 w-4 h-4 bg-black text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                            {cart.length}
+                        </span>
+                    )}
+                </button>
+                <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <Menu size={24} className="text-gray-700"/>
+                </button>
+            </div>
         </div>
-        <AnimatePresence>
-          {showSearch && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <input type="text" placeholder="O que você procura? (ex: Nike, Camisa...)" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full mt-4 p-3 bg-gray-100 rounded-xl border-none focus:ring-2 focus:ring-black outline-none text-sm" autoFocus />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      </nav>
+
+      {/* HERO SECTION COMPACTO */}
+      <header className="pt-24 pb-8 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto bg-black rounded-2xl p-6 md:p-10 text-white relative overflow-hidden shadow-xl">
+          <div className="relative z-10 max-w-2xl">
+            <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] md:text-xs font-bold mb-3 border border-white/10">NOVA COLEÇÃO 2024</span>
+            <h1 className="text-3xl md:text-5xl font-black leading-tight mb-4">
+              Estilo que define <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">sua atitude.</span>
+            </h1>
+            <p className="text-gray-400 mb-6 text-sm md:text-base max-w-lg">Peças exclusivas com design minimalista e qualidade premium.</p>
+            <button 
+                onClick={() => document.getElementById('shop-section')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-white text-black px-6 py-3 rounded-full font-bold text-sm hover:scale-105 transition-transform flex items-center gap-2"
+            >
+              Explorar Loja <ArrowRight size={16}/>
+            </button>
+          </div>
+          <div className="absolute -right-20 -top-40 w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-3xl"></div>
+          <div className="absolute right-10 -bottom-20 w-[250px] h-[250px] bg-purple-600/20 rounded-full blur-3xl"></div>
+        </div>
       </header>
 
-      {/* FILTROS */}
-      <div className="px-4 py-6 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-3">
-          {CATEGORIES.map((cat) => (
-            <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${selectedCategory === cat ? 'bg-black text-white shadow-lg scale-105' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'}`}>{cat}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* CARROSSEL */}
-      {!searchTerm && selectedCategory === 'Todos' && (
-        <section className="px-4 pb-8">
-          <div className="relative h-[320px] rounded-[2rem] overflow-hidden shadow-2xl">
-            <AnimatePresence mode='wait'>
-              <motion.div key={currentSlide} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.5, ease: "easeInOut" }} className={`${HERO_SLIDES[currentSlide].bgClass} absolute inset-0 p-8 text-white flex flex-col justify-center`}>
-                <div className={`absolute top-0 right-0 w-72 h-72 ${HERO_SLIDES[currentSlide].blobColor} rounded-full blur-[120px] opacity-40 -mr-20 -mt-20 transition-colors duration-1000`}></div>
-                <div className="relative z-10 max-w-xs">
-                  <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xs font-bold uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm mb-4 inline-block">{HERO_SLIDES[currentSlide].badge}</motion.span>
-                  <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="text-4xl font-extrabold mb-4 leading-tight">{HERO_SLIDES[currentSlide].title}</motion.h1>
-                  <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="text-gray-300 mb-6 text-sm">{HERO_SLIDES[currentSlide].desc}</motion.p>
-                  <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }} whileTap={{ scale: 0.95 }} className="bg-white text-black px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors w-fit shadow-md">Ver Ofertas <ArrowRight size={16} /></motion.button>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-                {HERO_SLIDES.map((_, index) => (
-                    <button key={index} onClick={() => setCurrentSlide(index)} className={`w-2 h-2 rounded-full transition-all ${currentSlide === index ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`} />
+      {/* FILTROS E BUSCA */}
+      <section id="shop-section" className="max-w-7xl mx-auto px-6 mb-8 sticky top-16 md:top-20 z-30 bg-white/95 backdrop-blur-sm py-4 -mx-6 md:mx-auto md:rounded-b-2xl border-b border-gray-100 md:border-none shadow-sm md:shadow-none">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                {CATEGORIES.map(cat => (
+                    <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-1.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-all border ${selectedCategory === cat ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-black'}`}>
+                        {cat}
+                    </button>
                 ))}
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* PRODUTOS */}
-      <main className="px-4">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            {searchTerm ? `Resultados para "${searchTerm}"` : `${selectedCategory}`} 
-            <Star size={18} className="text-yellow-500 fill-yellow-500" />
-          </h2>
-        </div>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-gray-400 text-sm animate-pulse">Carregando coleção...</p>
-          </div>
-        ) : (
-          <>
-            {filteredProducts.length > 0 ? (
-              <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                {filteredProducts.map((product, index) => {
-                  const displayImage = getMainImage(product);
-                  
-                  // BADGES SIMULADOS
-                  let Badge = null;
-                  if (index % 4 === 0) { 
-                    Badge = <div className="absolute top-3 left-3 bg-black text-white text-[10px] font-bold px-3 py-1 rounded-full z-10 shadow-sm tracking-wider">NOVO</div>;
-                  } else if (index % 4 === 1) {
-                    Badge = <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-full z-10 shadow-sm tracking-wider">20% OFF</div>;
-                  }
-
-                  return (
-                    <motion.div key={product.id} variants={item}>
-                      <Link href={`/product/${product.id}`} className="block group">
-                        <div className="bg-white rounded-2xl p-3 shadow-sm border border-transparent hover:border-gray-100 hover:shadow-xl transition-all duration-300 h-full flex flex-col relative overflow-hidden">
-                          <div className="aspect-square bg-gray-100 rounded-xl mb-3 overflow-hidden relative">
-                            {Badge}
-                            {displayImage ? (
-                              <img src={displayImage} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">Sem Foto</div>
-                            )}
-                          </div>
-                          <div className="flex flex-col flex-grow">
-                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1 tracking-wide">{product.category}</p>
-                            <h3 className="font-bold text-sm leading-tight mb-2 text-gray-800 line-clamp-2">{product.name}</h3>
-                            <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
-                              <span className="font-extrabold text-base">{product.price}</span>
-                              <div className="bg-black text-white p-2 rounded-full shadow-lg group-active:scale-90 transition-transform">
-                                <ArrowRight size={14} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            ) : (
-              <div className="text-center py-20 text-gray-400">
-                <p>Nenhum produto encontrado.</p>
-                <button onClick={() => {setSearchTerm(''); setSelectedCategory('Todos');}} className="mt-4 text-blue-600 underline text-sm">Limpar Filtros</button>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* === SEÇÃO NEWSLETTER AJUSTADA (Responsiva) === */}
-      <section className="mt-12 px-4">
-        <div className="bg-black rounded-2xl p-6 md:p-10 text-center relative overflow-hidden shadow-lg">
-            {/* Efeitos de Luz no Fundo */}
-            <div className="absolute top-0 left-0 w-40 h-40 bg-blue-600 rounded-full blur-[80px] opacity-20 -ml-10 -mt-10"></div>
-            <div className="absolute bottom-0 right-0 w-40 h-40 bg-purple-600 rounded-full blur-[80px] opacity-20 -mr-10 -mb-10"></div>
-            
-            <div className="relative z-10">
-                <Mail size={32} className="text-white mx-auto mb-3 opacity-80" />
-                <h2 className="text-xl md:text-2xl font-black text-white mb-2 tracking-tight">Entre para o Club G-Studio.</h2>
-                <p className="text-gray-400 mb-6 text-sm max-w-md mx-auto">
-                    Receba lançamentos e <span className="text-white font-bold">10% OFF</span> na primeira compra.
-                </p>
-
-                {/* FORMULÁRIO RESPONSIVO: Vertical no celular, Horizontal no PC */}
-                <form onSubmit={handleNewsSubmit} className="max-w-md mx-auto flex flex-col md:flex-row gap-3">
-                    <input 
-                        type="email" 
-                        required
-                        placeholder="Seu e-mail aqui" 
-                        value={emailNews}
-                        onChange={(e) => setEmailNews(e.target.value)}
-                        className="w-full md:flex-1 p-3 rounded-xl border-none focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                    />
-                    <button type="submit" className="w-full md:w-auto bg-blue-600 text-white p-3 px-6 rounded-xl hover:bg-blue-700 transition-colors shadow-lg font-bold flex items-center justify-center gap-2 text-sm">
-                        <Send size={16} /> Quero Desconto
-                    </button>
-                </form>
-                <p className="text-[10px] text-gray-500 mt-4">Sem spam. Cancele quando quiser.</p>
+            <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"/>
+                {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black"><X size={14} /></button>}
             </div>
+        </div>
+        <div className="mt-3 text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+            <Filter size={12} /> Mostrando {filteredProducts.length} {filteredProducts.length === 1 ? 'produto' : 'produtos'}
         </div>
       </section>
 
+      {/* PRODUTOS */}
+      <main className="max-w-7xl mx-auto px-6">
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[1,2,3,4].map(i => (<div key={i} className="animate-pulse space-y-3"><div className="bg-gray-200 h-56 rounded-2xl"></div><div className="h-3 bg-gray-200 rounded w-3/4"></div><div className="h-3 bg-gray-200 rounded w-1/4"></div></div>))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                <Search size={40} className="mx-auto text-gray-300 mb-3"/>
+                <h3 className="text-lg font-bold text-gray-900">Ops! Nada por aqui.</h3>
+                <button onClick={() => {setSearchTerm(''); setSelectedCategory('Todos')}} className="mt-4 text-blue-600 font-bold text-sm hover:underline">Limpar Filtros</button>
+            </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-10">
+            {filteredProducts.map((product) => (
+              <Link href={`/product/${product.id}`} key={product.id} className="group cursor-pointer block">
+                <div className="relative aspect-[4/5] bg-gray-100 rounded-2xl overflow-hidden mb-3 shadow-sm border border-gray-100">
+                  <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider z-10 shadow-sm">{product.category}</span>
+                  {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-in-out"/> : <div className="w-full h-full flex items-center justify-center text-gray-300 font-bold text-xs">Sem Foto</div>}
+                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4 backdrop-blur-[1px]">
+                      <div className="bg-white text-black px-4 py-2 rounded-full font-bold text-xs shadow-lg flex items-center gap-1 transform translate-y-2 group-hover:translate-y-0 transition-transform"><ShoppingBag size={14}/> Comprar</div>
+                  </div>
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 text-sm md:text-base leading-tight group-hover:text-blue-600 transition-colors line-clamp-1">{product.name}</h2>
+                  <p className="text-gray-500 text-xs md:text-sm mt-0.5 font-medium">{product.price}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

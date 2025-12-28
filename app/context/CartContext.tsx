@@ -1,98 +1,89 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import toast from 'react-hot-toast'; // <--- O TOAST AQUI
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export interface CartItem {
+// Define o formato do Produto
+interface Product {
   id: number;
   name: string;
   price: string;
-  image: string;
-  size: string;
-  quantity: number;
+  image_url: string;
 }
 
+// Define o formato do Item no Carrinho (Produto + Quantidade + Tamanho)
+interface CartItem extends Product {
+  quantity: number;
+  selectedSize: string;
+}
+
+// O que o contexto oferece para o resto do site
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: any, size: string) => void;
-  removeFromCart: (productId: number, size: string) => void;
-  clearCart: () => void;
-  cartOpen: boolean;
+  addToCart: (product: Product, size: string) => void;
+  removeFromCart: (id: number) => void;
   toggleCart: () => void;
-  totalValue: number;
+  isCartOpen: boolean;
 }
 
-const CartContext = createContext<CartContextType>({} as CartContextType);
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false); // <--- ESTADO DO CARRINHO (ABERTO/FECHADO)
 
+  // Carregar carrinho salvo no LocalStorage ao abrir o site
   useEffect(() => {
-    const savedCart = localStorage.getItem('gstudio-cart');
+    const savedCart = localStorage.getItem('@gstudio:cart');
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
   }, []);
 
+  // Salvar no LocalStorage sempre que o carrinho mudar
   useEffect(() => {
-    localStorage.setItem('gstudio-cart', JSON.stringify(cart));
+    localStorage.setItem('@gstudio:cart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product: any, size: string) => {
+  const addToCart = (product: Product, size: string) => {
     setCart((prev) => {
-      const existing = prev.find(item => item.id === product.id && item.size === size);
-      
-      if (existing) {
-        return prev.map(item => 
-          (item.id === product.id && item.size === size)
+      // Verifica se já existe o mesmo produto com o mesmo tamanho
+      const existingItem = prev.find((item) => item.id === product.id && item.selectedSize === size);
+
+      if (existingItem) {
+        // Se existe, aumenta a quantidade
+        return prev.map((item) =>
+          item.id === product.id && item.selectedSize === size
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
 
-      let finalImage = product.image_url;
-      if (product.gallery && Array.isArray(product.gallery) && product.gallery.length > 0) {
-          finalImage = product.gallery[0];
-      }
-
-      return [...prev, {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: finalImage || '',
-        size: size,
-        quantity: 1
-      }];
+      // Se não existe, adiciona novo
+      return [...prev, { ...product, quantity: 1, selectedSize: size }];
     });
-    setCartOpen(true);
-    // A NOTIFICAÇÃO LINDA:
-    toast.success(`Adicionado à sacola!`, {
-        icon: '🛍️',
-        style: { borderRadius: '10px', background: '#000', color: '#fff' },
-    });
+    
+    setIsCartOpen(true); // <--- ABRE O CARRINHO AUTOMATICAMENTE AO ADICIONAR
   };
 
-  const removeFromCart = (productId: number, size: string) => {
-    setCart(prev => prev.filter(item => !(item.id === productId && item.size === size)));
-    toast.error("Item removido", { style: { borderRadius: '10px', background: '#333', color: '#fff' }});
+  const removeFromCart = (id: number) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const clearCart = () => setCart([]);
-  const toggleCart = () => setCartOpen(!cartOpen);
-
-  const totalValue = cart.reduce((acc, item) => {
-    const priceNumber = parseFloat(
-      item.price.replace('R$', '').replace('.', '').replace(',', '.').trim()
-    );
-    return acc + (priceNumber * item.quantity);
-  }, 0);
+  const toggleCart = () => {
+    setIsCartOpen((prev) => !prev); // <--- TROCA ENTRE ABERTO E FECHADO
+  };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, cartOpen, toggleCart, totalValue }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, toggleCart, isCartOpen }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-export const useCart = () => useContext(CartContext);
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart deve ser usado dentro de um CartProvider');
+  }
+  return context;
+}
