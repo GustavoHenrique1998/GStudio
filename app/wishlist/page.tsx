@@ -1,105 +1,86 @@
 "use client";
 
 import React from 'react';
-import { X, Trash2, Heart, ShoppingBag } from 'lucide-react';
+import Link from 'next/link';
 import { useCart } from '../context/CartContext'; 
-import { motion, AnimatePresence } from 'framer-motion';
+import { Trash2, ShoppingBag, Heart, ArrowRight, ArrowLeft } from 'lucide-react';
 
-// Definindo a interface Product aqui para evitar erros
-interface Product {
-  id: number;
-  name: string;
-  price: string;
-  image_url: string;
-  category?: string;
-}
+export default function WishlistPage() {
+  const { wishlist, toggleWishlist, addToCart } = useCart();
 
-export default function WishlistSidebar() {
-  // Tipagem forçada para garantir compatibilidade
-  const { wishlist, toggleWishlist, isWishlistOpen, toggleWishlistSidebar, addToCart } = useCart() as unknown as {
-    wishlist: Product[];
-    toggleWishlist: (p: Product) => void;
-    isWishlistOpen: boolean;
-    toggleWishlistSidebar: () => void;
-    addToCart: (p: Product, s: string) => void;
-  };
-
-  const moveToCart = (product: Product) => {
-    addToCart(product, 'Padrão'); // Adiciona ao carrinho
-    toggleWishlist(product); // Remove da wishlist automaticamente
+  // Função para mover do Favoritos para o Carrinho
+  const moveToCart = (product: any) => {
+    addToCart(product, product.sizes && product.sizes.length > 0 ? product.sizes[0] : "ÚNICO");
+    toggleWishlist(product); // Remove dos favoritos depois de adicionar ao carrinho
   };
 
   return (
-    <AnimatePresence>
-      {isWishlistOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-            onClick={toggleWishlistSidebar}
-            className="fixed inset-0 bg-black/60 z-[90] backdrop-blur-sm"
-          />
+    <div className="min-h-screen bg-white pt-32 pb-20 px-6">
+      <div className="max-w-7xl mx-auto">
+        
+        <div className="flex items-center gap-4 mb-8">
+            <Link href="/" className="p-2 bg-gray-100 rounded-full hover:bg-black hover:text-white transition-colors">
+                <ArrowLeft size={20}/>
+            </Link>
+            <h1 className="text-3xl font-black tracking-tighter flex items-center gap-2">
+                Meus Favoritos <Heart className="fill-black text-black" size={24}/>
+            </h1>
+        </div>
 
-          {/* Sidebar */}
-          <motion.div 
-            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} 
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed top-0 right-0 h-full w-full md:w-[400px] bg-white z-[100] shadow-2xl flex flex-col border-l border-gray-100"
-          >
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white z-10">
-                <h2 className="text-xl font-black flex items-center gap-2 text-red-500">
-                    <Heart size={24} fill="currentColor" /> MEUS FAVORITOS
-                    <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">{wishlist.length}</span>
-                </h2>
-                <button onClick={toggleWishlistSidebar} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                    <X size={24} />
+        {wishlist.length === 0 ? (
+          // ESTADO VAZIO
+          <div className="text-center py-24 bg-gray-50 rounded-3xl border border-gray-100 border-dashed">
+            <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Heart size={40} className="text-gray-400"/>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Sua lista está vazia</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">Salve os itens que você mais gostou aqui para não perder de vista.</p>
+            <Link href="/" className="inline-flex items-center gap-2 bg-black text-white px-8 py-4 rounded-full font-bold hover:scale-105 transition-transform">
+              Explorar Loja <ArrowRight size={20}/>
+            </Link>
+          </div>
+        ) : (
+          // GRID DE FAVORITOS
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {wishlist.map((product) => (
+              <div key={product.id} className="group relative bg-white border border-gray-100 rounded-2xl p-4 hover:shadow-xl transition-all duration-300">
+                
+                {/* Botão de Remover (X) */}
+                <button 
+                    onClick={() => toggleWishlist(product)}
+                    className="absolute top-4 right-4 z-10 p-2 bg-white/80 backdrop-blur rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    title="Remover"
+                >
+                    <Trash2 size={16}/>
                 </button>
-            </div>
 
-            {/* Lista */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-                {wishlist.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-                        <Heart size={64} className="text-gray-300" />
-                        <p className="font-bold text-lg">Sua lista está vazia.</p>
-                        <button onClick={toggleWishlistSidebar} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-sm">
-                            Voltar a navegar
-                        </button>
+                {/* Imagem */}
+                <Link href={`/product/${product.id}`}>
+                    <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4 relative">
+                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
                     </div>
-                ) : (
-                    wishlist.map((item) => (
-                        <motion.div layout key={item.id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
-                            <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                                <img src={item.image_url} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1 flex flex-col justify-between">
-                                <div>
-                                    <h4 className="font-bold text-sm line-clamp-1">{item.name}</h4>
-                                    <p className="text-gray-500 text-xs mt-1">{item.price}</p>
-                                </div>
-                                <div className="flex gap-2 mt-2">
-                                    <button 
-                                        onClick={() => moveToCart(item)}
-                                        className="flex-1 bg-black text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-1 hover:bg-gray-800"
-                                    >
-                                        <ShoppingBag size={12} /> Comprar
-                                    </button>
-                                    <button 
-                                        onClick={() => toggleWishlist(item)}
-                                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))
-                )}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+                </Link>
+
+                {/* Informações */}
+                <div>
+                    <Link href={`/product/${product.id}`}>
+                        <h3 className="font-bold text-gray-900 line-clamp-1 hover:text-blue-600 transition-colors">{product.name}</h3>
+                    </Link>
+                    <p className="text-gray-500 text-sm mb-4">{product.price}</p>
+                    
+                    {/* Botão Mover para Carrinho */}
+                    <button 
+                        onClick={() => moveToCart(product)}
+                        className="w-full bg-black text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-900 transition-colors active:scale-95"
+                    >
+                        <ShoppingBag size={16}/> Mover p/ Sacola
+                    </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

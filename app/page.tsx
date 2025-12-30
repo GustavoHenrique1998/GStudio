@@ -152,7 +152,7 @@ export default function Home() {
       <header className="px-4 md:px-6 mt-6 md:mt-10 mb-8">
         <div className="max-w-7xl mx-auto bg-black rounded-2xl p-6 md:p-10 text-white relative overflow-hidden shadow-xl">
           <div className="relative z-10 max-w-2xl">
-            <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] md:text-xs font-bold mb-3 border border-white/10">NOVA COLEÇÃO 2024</span>
+            <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] md:text-xs font-bold mb-3 border border-white/10">NOVA COLEÇÃO 2026</span>
             <h1 className="text-3xl md:text-5xl font-black leading-tight mb-4">
               Estilo que define <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">sua atitude.</span>
             </h1>
