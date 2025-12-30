@@ -170,16 +170,32 @@ export default function AdminPage() {
   };
 
   // Helpers de Edição
-  const handleEdit = (p: Product) => {
-      setActiveTab('products'); setEditingId(p.id); setName(p.name); setPrice(p.price); 
-      setStock(p.stock.toString()); setCategory(p.category);
-      // Tratamento seguro de array
-      let loadedSizes: string[] = [];
-      if (Array.isArray(p.sizes)) loadedSizes = p.sizes;
-      else if (typeof p.sizes === 'string') loadedSizes = (p.sizes as string).split(',').map(s=>s.trim());
-      setSelectedSizes(loadedSizes);
-      if (loadedSizes.some(s => parseInt(s) > 30)) setSizeType('calcado'); else setSizeType('roupa');
-      window.scrollTo(0,0);
+ const handleEdit = (p: Product) => {
+    setActiveTab('products');
+    setEditingId(p.id);
+    setName(p.name);
+    setPrice(p.price);
+    setStock(p.stock.toString());
+    setCategory(p.category);
+    
+    // --- LÓGICA DE LIMPEZA DE TAMANHOS (CORREÇÃO) ---
+    let loadedSizes: string[] = [];
+    
+    if (Array.isArray(p.sizes)) {
+        // Se já for array, usa direto
+        loadedSizes = p.sizes; 
+    } else if (typeof p.sizes === 'string') {
+        // Se for texto, tenta limpar aspas e colchetes feios
+        const cleanString = (p.sizes as string).replace(/[\[\]"]/g, '').replace(/'/g, ''); 
+        loadedSizes = cleanString.split(',').map(s => s.trim());
+    }
+
+    setSelectedSizes(loadedSizes);
+    
+    if (loadedSizes.some(s => parseInt(s) > 30)) { setSizeType('calcado'); } else { setSizeType('roupa'); }
+    
+    setSelectedFiles([]); setPreviewUrls([]); 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const handleDelete = async (id: number) => { if(confirm("Deletar produto?")) { await supabase.from('produtos').delete().eq('id', id); fetchProducts(); } };
   const handleCancelEdit = () => { setEditingId(null); setName(""); setPrice(""); setStock("10"); setSelectedSizes([]); setSelectedFiles([]); setPreviewUrls([]); };

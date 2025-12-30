@@ -36,12 +36,18 @@ export default function ProductUI({ id }: { id: string }) {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  // Lógica de Tamanhos
+  // --- LÓGICA DE TAMANHOS (COM LIMPEZA DE ASPAS) ---
   const sizesFromDb = product?.sizes;
   const defaultSizes = product?.category === "Acessórios" ? ["ÚNICO"] : ["P", "M", "G", "GG", "XG"];
-  let SIZES = defaultSizes;
-  if (Array.isArray(sizesFromDb) && sizesFromDb.length > 0) { SIZES = sizesFromDb; } 
-  else if (typeof sizesFromDb === 'string') { SIZES = (sizesFromDb as string).split(',').map(s => s.trim()); }
+  let SIZES: string[] = defaultSizes;
+
+  if (Array.isArray(sizesFromDb) && sizesFromDb.length > 0) { 
+      SIZES = sizesFromDb; 
+  } else if (typeof sizesFromDb === 'string') { 
+      // Remove [ ] " ' e espaços extras
+      const cleanString = (sizesFromDb as string).replace(/[\[\]"']/g, '');
+      SIZES = cleanString.split(',').map(s => s.trim()).filter(s => s !== "");
+  }
 
   // Verificação de Estoque
   const stock = product?.stock || 0;
